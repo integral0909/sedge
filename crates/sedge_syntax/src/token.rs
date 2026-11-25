@@ -29,7 +29,6 @@ pub enum TokenKind {
     False,
     SelfKw,
     Native,
-    Test,
     Where,
 
     // Punctuation
@@ -118,7 +117,6 @@ impl TokenKind {
             "false" => TokenKind::False,
             "self" => TokenKind::SelfKw,
             "native" => TokenKind::Native,
-            "test" => TokenKind::Test,
             "where" => TokenKind::Where,
             "_" => TokenKind::Underscore,
             _ => return None,
@@ -175,7 +173,6 @@ impl fmt::Display for TokenKind {
             False => "`false`",
             SelfKw => "`self`",
             Native => "`native`",
-            Test => "`test`",
             Where => "`where`",
             LParen => "`(`",
             RParen => "`)`",

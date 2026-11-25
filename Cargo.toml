@@ -6,7 +6,7 @@ default-members = ["crates/sedge"]
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.80"
+rust-version = "1.82"
 license = "MIT"
 repository = "https://github.com/integral0909/sedge"
 authors = ["integral0909"]

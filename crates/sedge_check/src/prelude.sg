@@ -1,0 +1,546 @@
+// The Sedge prelude. It is checked before every program, and its names are
+// available everywhere. `native` functions are implemented by the VM; the
+// rest are ordinary Sedge.
+
+/// An optional value: either `Some(value)` or `None`.
+enum Option[T] {
+    Some(T),
+    None,
+}
+
+/// The outcome of an operation that can fail: `Ok(value)` or `Err(error)`.
+enum Result[T, E] {
+    Ok(T),
+    Err(E),
+}
+
+/// Prints a value followed by a newline. Strings print without quotes.
+native fn print[T](value: T)
+
+/// Prints a value without a trailing newline.
+native fn write[T](value: T)
+
+/// Converts any value to its display form, as `print` shows it.
+native fn str[T](value: T) -> String
+
+/// Converts any value to its debug form, with strings quoted.
+native fn debug[T](value: T) -> String
+
+/// Stops the program with an error message and a stack trace.
+native fn panic(message: String) -> Never
+
+/// Panics if the condition is false.
+native fn assert(condition: Bool)
+
+/// Panics, showing both values, if they are not equal.
+native fn assert_eq[T](actual: T, expected: T)
+
+/// Reads one line from standard input, without its line ending.
+/// Returns `None` at the end of input.
+native fn read_line() -> Option[String]
+
+/// The command-line arguments after the script name.
+native fn args() -> [String]
+
+/// Reads a whole file as UTF-8 text.
+native fn read_file(path: String) -> Result[String, String]
+
+/// Writes a string to a file, replacing it.
+native fn write_file(path: String, contents: String) -> Result[(), String]
+
+/// Seconds elapsed since the program started.
+native fn clock() -> Float
+
+/// Ends the program with an exit status.
+native fn exit(code: Int) -> Never
+
+/// A pseudo-random Float in [0, 1). The sequence is the same on every run
+/// unless reseeded with `seed_random`.
+native fn random() -> Float
+
+/// Reseeds the generator used by `random`.
+native fn seed_random(seed: Int)
+
+/// A pseudo-random Int in [lo, hi).
+fn random_int(lo: Int, hi: Int) -> Int {
+    lo + (random() * (hi - lo).to_float()).to_int()
+}
+
+/// The smaller of two values.
+fn min[T: Ord](a: T, b: T) -> T {
+    if b < a { b } else { a }
+}
+
+/// The larger of two values.
+fn max[T: Ord](a: T, b: T) -> T {
+    if b > a { b } else { a }
+}
+
+impl Int {
+    /// Converts to the nearest Float.
+    native fn to_float(self) -> Float
+    /// The absolute value. Panics on the smallest Int, which has none.
+    native fn abs(self) -> Int
+    /// Raises to a non-negative power, panicking on overflow.
+    native fn pow(self, exp: Int) -> Int
+    /// The character with this Unicode code point.
+    native fn to_char(self) -> String
+    /// Formats in the given base (2 to 36).
+    native fn to_base(self, base: Int) -> String
+
+    /// Limits the value to the range [lo, hi].
+    fn clamp(self, lo: Int, hi: Int) -> Int {
+        if self < lo { lo } else if self > hi { hi } else { self }
+    }
+
+    /// -1, 0 or 1.
+    fn sign(self) -> Int {
+        if self < 0 { -1 } else if self > 0 { 1 } else { 0 }
+    }
+}
+
+impl Float {
+    /// Truncates toward zero. Panics if the value is NaN or out of range.
+    native fn to_int(self) -> Int
+    native fn sqrt(self) -> Float
+    native fn floor(self) -> Float
+    native fn ceil(self) -> Float
+    native fn round(self) -> Float
+    native fn abs(self) -> Float
+    native fn sin(self) -> Float
+    native fn cos(self) -> Float
+    native fn tan(self) -> Float
+    native fn atan2(self, x: Float) -> Float
+    native fn exp(self) -> Float
+    native fn ln(self) -> Float
+    native fn pow(self, exp: Float) -> Float
+    native fn is_nan(self) -> Bool
+    /// Formats with a fixed number of digits after the point.
+    native fn fixed(self, digits: Int) -> String
+
+    fn clamp(self, lo: Float, hi: Float) -> Float {
+        if self < lo { lo } else if self > hi { hi } else { self }
+    }
+}
+
+impl String {
+    /// The length in bytes of the UTF-8 encoding.
+    native fn len(self) -> Int
+    /// Each character as a one-character string.
+    native fn chars(self) -> [String]
+    /// The byte at an index.
+    native fn byte_at(self, index: Int) -> Int
+    /// The code point of the first character.
+    native fn code(self) -> Int
+    /// The bytes from start up to end. Panics if either is not on a
+    /// character boundary.
+    native fn slice(self, start: Int, end: Int) -> String
+    /// The byte index of the first occurrence of a substring.
+    native fn find(self, needle: String) -> Option[Int]
+    native fn contains(self, needle: String) -> Bool
+    native fn starts_with(self, prefix: String) -> Bool
+    native fn ends_with(self, suffix: String) -> Bool
+    native fn split(self, separator: String) -> [String]
+    native fn lines(self) -> [String]
+    native fn trim(self) -> String
+    native fn to_upper(self) -> String
+    native fn to_lower(self) -> String
+    native fn replace(self, from: String, to: String) -> String
+    native fn repeat(self, count: Int) -> String
+    native fn parse_int(self) -> Option[Int]
+    native fn parse_float(self) -> Option[Float]
+
+    fn is_empty(self) -> Bool {
+        self.len() == 0
+    }
+}
+
+impl Array[T] {
+    /// Builds an array holding `count` copies of a value.
+    native fn filled(value: T, count: Int) -> [T]
+
+    native fn len(self) -> Int
+    /// Adds a value to the end.
+    native fn push(self, value: T)
+    /// Removes and returns the last value.
+    native fn pop(self) -> Option[T]
+    /// Inserts a value before the given index.
+    native fn insert(self, index: Int, value: T)
+    /// Removes the value at an index and returns it.
+    native fn remove(self, index: Int) -> T
+    native fn clear(self)
+    /// A new array with the values from start up to end.
+    native fn slice(self, start: Int, end: Int) -> [T]
+    /// Reverses the array in place.
+    native fn reverse(self)
+    /// A shallow copy.
+    native fn copy(self) -> [T]
+    /// A new array with this array's values followed by another's.
+    native fn concat(self, other: [T]) -> [T]
+    /// Joins the display forms of the values with a separator.
+    native fn join(self, separator: String) -> String
+    native fn contains(self, value: T) -> Bool
+    native fn index_of(self, value: T) -> Option[Int]
+    /// Sorts in place, in ascending order. The sort is stable.
+    native fn sort(self) where T: Ord
+
+    fn is_empty(self) -> Bool {
+        self.len() == 0
+    }
+
+    fn get(self, index: Int) -> Option[T] {
+        if index >= 0 && index < self.len() { Some(self[index]) } else { None }
+    }
+
+    fn first(self) -> Option[T] {
+        self.get(0)
+    }
+
+    fn last(self) -> Option[T] {
+        self.get(self.len() - 1)
+    }
+
+    fn map[U](self, f: fn(T) -> U) -> [U] {
+        var out = []
+        for x in self {
+            out.push(f(x))
+        }
+        out
+    }
+
+    fn filter(self, keep: fn(T) -> Bool) -> [T] {
+        var out = []
+        for x in self {
+            if keep(x) {
+                out.push(x)
+            }
+        }
+        out
+    }
+
+    fn fold[A](self, initial: A, f: fn(A, T) -> A) -> A {
+        var acc = initial
+        for x in self {
+            acc = f(acc, x)
+        }
+        acc
+    }
+
+    fn each(self, f: fn(T)) {
+        for x in self {
+            f(x)
+        }
+    }
+
+    fn any(self, test: fn(T) -> Bool) -> Bool {
+        for x in self {
+            if test(x) {
+                return true
+            }
+        }
+        false
+    }
+
+    fn all(self, test: fn(T) -> Bool) -> Bool {
+        for x in self {
+            if !test(x) {
+                return false
+            }
+        }
+        true
+    }
+
+    fn find(self, test: fn(T) -> Bool) -> Option[T] {
+        for x in self {
+            if test(x) {
+                return Some(x)
+            }
+        }
+        None
+    }
+
+    fn position(self, test: fn(T) -> Bool) -> Option[Int] {
+        var i = 0
+        for x in self {
+            if test(x) {
+                return Some(i)
+            }
+            i += 1
+        }
+        None
+    }
+
+    fn count(self, test: fn(T) -> Bool) -> Int {
+        var n = 0
+        for x in self {
+            if test(x) {
+                n += 1
+            }
+        }
+        n
+    }
+
+    fn enumerate(self) -> [(Int, T)] {
+        var out = []
+        var i = 0
+        for x in self {
+            out.push((i, x))
+            i += 1
+        }
+        out
+    }
+
+    fn zip[U](self, other: [U]) -> [(T, U)] {
+        var out = []
+        let n = min(self.len(), other.len())
+        for i in 0..n {
+            out.push((self[i], other[i]))
+        }
+        out
+    }
+
+    fn flat_map[U](self, f: fn(T) -> [U]) -> [U] {
+        var out = []
+        for x in self {
+            for y in f(x) {
+                out.push(y)
+            }
+        }
+        out
+    }
+
+    fn take(self, n: Int) -> [T] {
+        self.slice(0, n.clamp(0, self.len()))
+    }
+
+    fn skip(self, n: Int) -> [T] {
+        self.slice(n.clamp(0, self.len()), self.len())
+    }
+
+    /// A sorted copy.
+    fn sorted(self) -> [T] where T: Ord {
+        let out = self.copy()
+        out.sort()
+        out
+    }
+
+    /// Sorts in place by a comparison that returns a negative number, zero
+    /// or a positive number. The sort is stable.
+    fn sort_by(self, compare: fn(T, T) -> Int) {
+        let n = self.len()
+        if n < 2 {
+            return
+        }
+        var src = self.copy()
+        var dst = self.copy()
+        var width = 1
+        while width < n {
+            var lo = 0
+            while lo < n {
+                let mid = min(lo + width, n)
+                let hi = min(lo + 2 * width, n)
+                var i = lo
+                var j = mid
+                var k = lo
+                while k < hi {
+                    if i < mid && (j >= hi || compare(src[i], src[j]) <= 0) {
+                        dst[k] = src[i]
+                        i += 1
+                    } else {
+                        dst[k] = src[j]
+                        j += 1
+                    }
+                    k += 1
+                }
+                lo += 2 * width
+            }
+            let t = src
+            src = dst
+            dst = t
+            width *= 2
+        }
+        for i in 0..n {
+            self[i] = src[i]
+        }
+    }
+
+    fn min(self) -> Option[T] where T: Ord {
+        if self.is_empty() {
+            return None
+        }
+        var best = self[0]
+        for x in self {
+            if x < best {
+                best = x
+            }
+        }
+        Some(best)
+    }
+
+    fn max(self) -> Option[T] where T: Ord {
+        if self.is_empty() {
+            return None
+        }
+        var best = self[0]
+        for x in self {
+            if x > best {
+                best = x
+            }
+        }
+        Some(best)
+    }
+}
+
+impl Map[K, V] {
+    /// An empty map. Keys keep their insertion order.
+    native fn new() -> Map[K, V] where K: Key
+
+    native fn len(self) -> Int
+    native fn get(self, key: K) -> Option[V]
+    /// Inserts or replaces the value for a key.
+    native fn set(self, key: K, value: V)
+    native fn contains(self, key: K) -> Bool
+    /// Removes a key, returning its value.
+    native fn remove(self, key: K) -> Option[V]
+    native fn keys(self) -> [K]
+    native fn values(self) -> [V]
+    native fn entries(self) -> [(K, V)]
+    native fn clear(self)
+
+    fn is_empty(self) -> Bool {
+        self.len() == 0
+    }
+
+    fn get_or(self, key: K, default: V) -> V {
+        match self.get(key) {
+            Some(v) => v,
+            None => default,
+        }
+    }
+
+    /// Replaces the value for a key with `f` applied to it, starting from
+    /// `default` when the key is missing.
+    fn update(self, key: K, default: V, f: fn(V) -> V) {
+        self.set(key, f(self.get_or(key, default)))
+    }
+}
+
+impl Option[T] {
+    fn is_some(self) -> Bool {
+        match self {
+            Some(_) => true,
+            None => false,
+        }
+    }
+
+    fn is_none(self) -> Bool {
+        !self.is_some()
+    }
+
+    /// The value, panicking if there is none.
+    fn unwrap(self) -> T {
+        match self {
+            Some(v) => v,
+            None => panic("called `unwrap` on `None`"),
+        }
+    }
+
+    /// The value, panicking with a message if there is none.
+    fn expect(self, message: String) -> T {
+        match self {
+            Some(v) => v,
+            None => panic(message),
+        }
+    }
+
+    fn unwrap_or(self, default: T) -> T {
+        match self {
+            Some(v) => v,
+            None => default,
+        }
+    }
+
+    fn map[U](self, f: fn(T) -> U) -> Option[U] {
+        match self {
+            Some(v) => Some(f(v)),
+            None => None,
+        }
+    }
+
+    fn and_then[U](self, f: fn(T) -> Option[U]) -> Option[U] {
+        match self {
+            Some(v) => f(v),
+            None => None,
+        }
+    }
+
+    fn or(self, other: Option[T]) -> Option[T] {
+        match self {
+            Some(_) => self,
+            None => other,
+        }
+    }
+
+    fn ok_or[E](self, error: E) -> Result[T, E] {
+        match self {
+            Some(v) => Ok(v),
+            None => Err(error),
+        }
+    }
+}
+
+impl Result[T, E] {
+    fn is_ok(self) -> Bool {
+        match self {
+            Ok(_) => true,
+            Err(_) => false,
+        }
+    }
+
+    fn is_err(self) -> Bool {
+        !self.is_ok()
+    }
+
+    /// The value, panicking with the error if there is none.
+    fn unwrap(self) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic("called `unwrap` on an error: ${e}"),
+        }
+    }
+
+    fn expect(self, message: String) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic("${message}: ${e}"),
+        }
+    }
+
+    fn unwrap_or(self, default: T) -> T {
+        match self {
+            Ok(v) => v,
+            Err(_) => default,
+        }
+    }
+
+    fn map[U](self, f: fn(T) -> U) -> Result[U, E] {
+        match self {
+            Ok(v) => Ok(f(v)),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn map_err[F](self, f: fn(E) -> F) -> Result[T, F] {
+        match self {
+            Ok(v) => Ok(v),
+            Err(e) => Err(f(e)),
+        }
+    }
+
+    fn ok(self) -> Option[T] {
+        match self {
+            Ok(v) => Some(v),
+            Err(_) => None,
+        }
+    }
+}

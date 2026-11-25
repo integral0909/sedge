@@ -268,7 +268,6 @@ impl<'a> Parser<'a> {
                 | TokenKind::Enum
                 | TokenKind::Impl
                 | TokenKind::Native
-                | TokenKind::Test
                     if depth == 0 =>
                 {
                     return
@@ -287,7 +286,9 @@ impl<'a> Parser<'a> {
             TokenKind::Struct => Ok(Item::Struct(self.struct_decl(doc)?)),
             TokenKind::Enum => Ok(Item::Enum(self.enum_decl(doc)?)),
             TokenKind::Impl => Ok(Item::Impl(self.impl_decl()?)),
-            TokenKind::Test => Ok(Item::Test(self.test_decl()?)),
+            TokenKind::Ident(name) if name == "test" && matches!(self.nth_kind(1), TokenKind::Str(_)) => {
+                Ok(Item::Test(self.test_decl()?))
+            }
             TokenKind::Let | TokenKind::Var => {
                 let span = self.peek().span;
                 self.diagnostics.push(
