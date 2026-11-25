@@ -1,0 +1,19 @@
+[package]
+name = "sedge"
+description = "A statically typed scripting language with a register VM"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "sedge"
+path = "src/main.rs"
+
+[dependencies]
+sedge_syntax.workspace = true
+sedge_check.workspace = true
+sedge_compile.workspace = true
+sedge_vm.workspace = true
+sedge_lsp.workspace = true

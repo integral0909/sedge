@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+default-members = ["crates/sedge"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "MIT"
+repository = "https://github.com/integral0909/sedge"
+authors = ["integral0909"]
+
+[workspace.dependencies]
+sedge_syntax = { path = "crates/sedge_syntax" }
+sedge_check = { path = "crates/sedge_check" }
+sedge_compile = { path = "crates/sedge_compile" }
+sedge_vm = { path = "crates/sedge_vm" }
+sedge_lsp = { path = "crates/sedge_lsp" }
+
+[profile.release]
+debug = 1
