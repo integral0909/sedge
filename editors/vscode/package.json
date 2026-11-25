@@ -1,0 +1,39 @@
+{
+  "name": "sedge",
+  "displayName": "Sedge",
+  "description": "Syntax highlighting and language server support for the Sedge language",
+  "version": "0.1.0",
+  "license": "MIT",
+  "publisher": "integral0909",
+  "repository": { "type": "git", "url": "https://github.com/integral0909/sedge" },
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Programming Languages"],
+  "main": "./extension.js",
+  "activationEvents": ["onLanguage:sedge"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "sedge",
+        "aliases": ["Sedge", "sedge"],
+        "extensions": [".sg"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      { "language": "sedge", "scopeName": "source.sedge", "path": "./syntaxes/sedge.tmLanguage.json" }
+    ],
+    "configuration": {
+      "title": "Sedge",
+      "properties": {
+        "sedge.path": {
+          "type": "string",
+          "default": "sedge",
+          "description": "Path to the sedge executable, which is started as `sedge lsp`."
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

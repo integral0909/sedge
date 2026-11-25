@@ -1,0 +1,92 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Sedge",
+  "scopeName": "source.sedge",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#declarations" },
+    { "include": "#keywords" },
+    { "include": "#numbers" },
+    { "include": "#types" },
+    { "include": "#calls" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        { "name": "comment.line.documentation.sedge", "match": "///.*$" },
+        { "name": "comment.line.double-slash.sedge", "match": "//.*$" },
+        { "name": "comment.block.sedge", "begin": "/\\*", "end": "\\*/" }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.sedge",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        { "name": "constant.character.escape.sedge", "match": "\\\\(n|t|r|0|\\\\|\"|\\$|u\\{[0-9a-fA-F]+\\})" },
+        {
+          "name": "meta.interpolation.sedge",
+          "begin": "\\$\\{",
+          "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.sedge" } },
+          "end": "\\}",
+          "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.sedge" } },
+          "patterns": [{ "include": "$self" }]
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "match": "\\b(fn)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": { "1": { "name": "keyword.declaration.function.sedge" }, "2": { "name": "entity.name.function.sedge" } }
+        },
+        {
+          "match": "\\b(struct|enum|impl)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": { "1": { "name": "keyword.declaration.type.sedge" }, "2": { "name": "entity.name.type.sedge" } }
+        },
+        {
+          "match": "^\\s*(test)\\s+(?=\")",
+          "captures": { "1": { "name": "keyword.declaration.test.sedge" } }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        { "name": "keyword.control.sedge", "match": "\\b(if|else|while|for|in|return|break|continue|match)\\b" },
+        { "name": "keyword.other.sedge", "match": "\\b(let|var|fn|native|where|struct|enum|impl)\\b" },
+        { "name": "constant.language.sedge", "match": "\\b(true|false)\\b" },
+        { "name": "variable.language.self.sedge", "match": "\\bself\\b" }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        { "name": "constant.numeric.hex.sedge", "match": "\\b0x[0-9a-fA-F_]+\\b" },
+        { "name": "constant.numeric.binary.sedge", "match": "\\b0b[01_]+\\b" },
+        { "name": "constant.numeric.float.sedge", "match": "\\b[0-9][0-9_]*(\\.[0-9][0-9_]*)?([eE][+-]?[0-9]+)\\b" },
+        { "name": "constant.numeric.float.sedge", "match": "\\b[0-9][0-9_]*\\.[0-9][0-9_]*\\b" },
+        { "name": "constant.numeric.integer.sedge", "match": "\\b[0-9][0-9_]*\\b" }
+      ]
+    },
+    "types": {
+      "name": "entity.name.type.sedge",
+      "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+    },
+    "calls": {
+      "match": "\\b([a-z_][A-Za-z0-9_]*)\\s*(?=\\()",
+      "captures": { "1": { "name": "entity.name.function.call.sedge" } }
+    },
+    "operators": {
+      "patterns": [
+        { "name": "keyword.operator.arrow.sedge", "match": "->|=>" },
+        { "name": "keyword.operator.range.sedge", "match": "\\.\\.=?" },
+        { "name": "keyword.operator.comparison.sedge", "match": "==|!=|<=|>=|<|>" },
+        { "name": "keyword.operator.logical.sedge", "match": "&&|\\|\\||!" },
+        { "name": "keyword.operator.assignment.sedge", "match": "[+\\-*/%]?=" },
+        { "name": "keyword.operator.arithmetic.sedge", "match": "[+\\-*/%&|^]|<<|>>" },
+        { "name": "keyword.operator.question.sedge", "match": "\\?" }
+      ]
+    }
+  }
+}

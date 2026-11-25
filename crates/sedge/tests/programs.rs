@@ -142,3 +142,39 @@ fn examples_compile() {
         }
     }
 }
+
+/// Every complete program in the documentation compiles and runs.
+#[test]
+fn documentation_examples() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut checked = 0;
+    for doc in ["README.md", "docs/language.md", "docs/internals.md"] {
+        let text = std::fs::read_to_string(root.join(doc)).unwrap();
+        let mut in_block = false;
+        let mut block = String::new();
+        for line in text.lines() {
+            if !in_block && line.trim() == "```sedge" {
+                in_block = true;
+                block.clear();
+            } else if in_block && line.trim() == "```" {
+                in_block = false;
+                if !block.contains("fn main") {
+                    continue;
+                }
+                checked += 1;
+                let built = match build(&[("doc.sg".into(), block.clone())], false) {
+                    Ok((b, _)) => b,
+                    Err(e) => panic!("example in {doc} does not compile:\n{block}\n{e}"),
+                };
+                let buf = SharedBuf::default();
+                if let Err(e) = run(&built, Vec::new(), Box::new(buf.clone())) {
+                    panic!("example in {doc} failed:\n{block}\n{e}");
+                }
+            } else if in_block {
+                block.push_str(line);
+                block.push('\n');
+            }
+        }
+    }
+    assert!(checked >= 10, "only {checked} examples found");
+}
