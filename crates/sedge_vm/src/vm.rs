@@ -506,7 +506,11 @@ impl Vm {
                         jump!(offset);
                     }
                 }
-
+                Op::JumpIfNotLeI { a, b, offset } => {
+                    if reg!(a).as_int() > reg!(b).as_int() {
+                        jump!(offset);
+                    }
+                }
                 Op::Call { base: b, argc } => {
                     safepoint!();
                     let callee = reg!(b);

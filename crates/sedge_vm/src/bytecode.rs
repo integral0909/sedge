@@ -226,6 +226,12 @@ pub enum Op {
         b: Reg,
         offset: i32,
     },
+    /// Jumps unless `a <= b` (Ints).
+    JumpIfNotLeI {
+        a: Reg,
+        b: Reg,
+        offset: i32,
+    },
 
     /// Calls the closure in `base` with `argc` arguments after it; the
     /// result replaces the closure.

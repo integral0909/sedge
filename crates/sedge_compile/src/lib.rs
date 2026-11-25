@@ -131,6 +131,7 @@ impl Builder {
             | Op::JumpIf { offset, .. }
             | Op::JumpIfNot { offset, .. }
             | Op::JumpIfNotLtI { offset, .. }
+            | Op::JumpIfNotLeI { offset, .. }
             | Op::JumpIfNotTag { offset, .. } => *offset = off,
             other => panic!("patching a non-jump {other:?}"),
         }
@@ -212,13 +213,7 @@ impl<'a> Compiler<'a> {
             self.box_params(&mut b, &f.param_locals);
             let body = decl.body.as_ref().unwrap();
             b.line = self.line(body.span);
-            let ret_unit = f.ret == Ty::Unit;
-            let r = self.block(&mut b, body, None)?;
-            if ret_unit {
-                b.emit(Op::ReturnUnit);
-            } else {
-                b.emit(Op::Return { src: r });
-            }
+            self.tail_block(&mut b, body, f.ret == Ty::Unit)?;
             self.check_regs(&b, f.span)?;
             let proto = b.finish(f.name.clone(), f.params.len() as u16, f.builtin);
             let idx = self.fn_proto[&(id as FnId)];
@@ -441,8 +436,7 @@ impl<'a> Compiler<'a> {
             StmtKind::Assign { target, op, value } => self.assign(b, target, *op, value)?,
             StmtKind::While { cond, body } => {
                 let start = b.here();
-                let c = self.expr(b, cond, None)?;
-                let exit = b.emit(Op::JumpIfNot { cond: c, offset: 0 });
+                let exit = self.branch_unless(b, cond)?;
                 b.loops.push(Loop {
                     start,
                     breaks: Vec::new(),
@@ -679,6 +673,90 @@ impl<'a> Compiler<'a> {
         b.emit(arith_op(bin, kind, dst, x, y));
     }
 
+    /// Emits a jump taken when `cond` is false, fusing Int comparisons
+    /// into the jump. Returns the jump to patch.
+    fn branch_unless(&mut self, b: &mut Builder, cond: &Expr) -> Result<usize, CompileError> {
+        if let ExprKind::Binary { op, lhs, rhs } = &cond.kind {
+            if matches!(op, BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge)
+                && int_kind(self.ty(lhs.id)) == Kind::Int
+            {
+                let x = self.expr(b, lhs, None)?;
+                let y = self.expr(b, rhs, None)?;
+                let (p, q) = if matches!(op, BinOp::Gt | BinOp::Ge) { (y, x) } else { (x, y) };
+                let jump = if matches!(op, BinOp::Lt | BinOp::Gt) {
+                    Op::JumpIfNotLtI { a: p, b: q, offset: 0 }
+                } else {
+                    Op::JumpIfNotLeI { a: p, b: q, offset: 0 }
+                };
+                return Ok(b.emit(jump));
+            }
+        }
+        let c = self.expr(b, cond, None)?;
+        Ok(b.emit(Op::JumpIfNot { cond: c, offset: 0 }))
+    }
+
+    /// Compiles an expression whose value is returned, emitting `return`
+    /// in each branch of `if` and `match` instead of joining first.
+    fn tail(&mut self, b: &mut Builder, e: &Expr, unit: bool) -> Result<(), CompileError> {
+        match &e.kind {
+            ExprKind::If {
+                cond,
+                then,
+                else_: Some(els),
+            } => {
+                b.line = self.line(e.span);
+                let to_else = self.branch_unless(b, cond)?;
+                let saved = b.next;
+                self.tail_block(b, then, unit)?;
+                b.next = saved;
+                b.patch(to_else);
+                self.tail(b, els, unit)?;
+                b.next = saved;
+            }
+            ExprKind::Block(block) => self.tail_block(b, block, unit)?,
+            _ => {
+                let r = self.expr(b, e, None)?;
+                if unit {
+                    b.emit(Op::ReturnUnit);
+                } else {
+                    b.emit(Op::Return { src: r });
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn tail_block(&mut self, b: &mut Builder, block: &Block, unit: bool) -> Result<(), CompileError> {
+        let saved = b.next;
+        let n = block.stmts.len();
+        for (i, s) in block.stmts.iter().enumerate() {
+            b.line = self.line(s.span);
+            match &s.kind {
+                StmtKind::Expr(e) if i + 1 == n => {
+                    self.tail(b, e, unit)?;
+                    b.next = saved;
+                    return Ok(());
+                }
+                StmtKind::Let { .. } => self.stmt(b, s)?,
+                _ => {
+                    let keep = b.next;
+                    self.stmt(b, s)?;
+                    b.next = keep;
+                }
+            }
+        }
+        b.next = saved;
+        if unit {
+            b.emit(Op::ReturnUnit);
+        } else {
+            let r = b.alloc();
+            b.emit(Op::LoadUnit { dst: r });
+            b.emit(Op::Return { src: r });
+            b.next = saved;
+        }
+        Ok(())
+    }
+
     // ----- expressions -----------------------------------------------------
 
     fn load_int(&mut self, b: &mut Builder, dst: Reg, v: i64) {
@@ -797,8 +875,7 @@ impl<'a> Compiler<'a> {
             }
             ExprKind::If { cond, then, else_ } => {
                 let d = self.dest(b, dst);
-                let c = self.expr(b, cond, None)?;
-                let to_else = b.emit(Op::JumpIfNot { cond: c, offset: 0 });
+                let to_else = self.branch_unless(b, cond)?;
                 self.block(b, then, Some(d))?;
                 match else_ {
                     Some(els) => {
@@ -965,9 +1042,10 @@ impl<'a> Compiler<'a> {
         }
         let kind = int_kind(self.ty(lhs.id));
         // `x + 1` on Ints becomes a single instruction.
-        if op == BinOp::Add && kind == Kind::Int {
+        if matches!(op, BinOp::Add | BinOp::Sub) && kind == Kind::Int {
             if let ExprKind::Int(v) = rhs.kind {
-                if let Ok(imm) = i32::try_from(v) {
+                let v = if op == BinOp::Sub { v.checked_neg() } else { Some(v) };
+                if let Some(imm) = v.and_then(|v| i32::try_from(v).ok()) {
                     let x = self.expr(b, lhs, None)?;
                     let d = self.dest(b, dst);
                     b.emit(Op::AddImm {
@@ -1236,12 +1314,7 @@ impl<'a> Compiler<'a> {
         }
         self.box_params(&mut nb, &info.params);
         let ret_unit = matches!(self.ty(e.id), Ty::Fn(_, r) if **r == Ty::Unit);
-        let r = self.expr(&mut nb, body, None)?;
-        if ret_unit {
-            nb.emit(Op::ReturnUnit);
-        } else {
-            nb.emit(Op::Return { src: r });
-        }
+        self.tail(&mut nb, body, ret_unit)?;
         self.check_regs(&nb, e.span)?;
         let line = self.line(e.span);
         let name = format!("<lambda:{line}>");

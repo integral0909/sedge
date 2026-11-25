@@ -68,6 +68,9 @@ fn show_op(program: &Program, ip: usize, op: &Op) -> String {
         Op::AddImm { dst, a, value } => format!("r{dst} = r{a} + {value}"),
         Op::JumpIf { cond, offset } => format!("if r{cond} goto {}", target(ip, offset)),
         Op::JumpIfNot { cond, offset } => format!("unless r{cond} goto {}", target(ip, offset)),
+        Op::JumpIfNotLeI { a, b, offset } => {
+            format!("unless r{a} <= r{b} goto {}", target(ip, offset))
+        }
         Op::JumpIfNotLtI { a, b, offset } => {
             format!("unless r{a} < r{b} goto {}", target(ip, offset))
         }
