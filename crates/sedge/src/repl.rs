@@ -43,12 +43,22 @@ impl Session {
 
     fn source(&self, extra_items: &[&str], extra_stmts: &[&str]) -> String {
         let mut s = String::new();
-        for item in self.items.iter().map(|s| s.as_str()).chain(extra_items.iter().copied()) {
+        for item in self
+            .items
+            .iter()
+            .map(|s| s.as_str())
+            .chain(extra_items.iter().copied())
+        {
             s.push_str(item);
             s.push('\n');
         }
         s.push_str("fn main() {\n");
-        for st in self.stmts.iter().map(|s| s.as_str()).chain(extra_stmts.iter().copied()) {
+        for st in self
+            .stmts
+            .iter()
+            .map(|s| s.as_str())
+            .chain(extra_stmts.iter().copied())
+        {
             s.push_str(st);
             s.push('\n');
         }
@@ -111,35 +121,32 @@ impl Session {
         if is_expr {
             let binding = format!("let it = ({input})");
             let src = self.source(&[], &[&binding]);
-            match build(&[("repl".into(), src.clone())], false) {
-                Ok((built, _)) => {
-                    let ty = built
-                        .analysis
-                        .typed
-                        .locals
-                        .iter()
-                        .rev()
-                        .find(|l| l.name == "it")
-                        .map(|l| l.ty.clone());
-                    if ty.as_ref().is_some_and(|t| *t != Ty::Unit) {
-                        let show = format!("{binding}\nprint(debug(it))");
-                        let shown_ty = built.analysis.typed.show(ty.as_ref().unwrap());
-                        let out = self.run_with(&show, false);
-                        // Keep the binding so `it` refers to the last value.
-                        return Reply::Output(match out {
-                            Ok(text) => {
-                                self.stmts.push(binding);
-                                let mut lines = text;
-                                if lines.ends_with('\n') {
-                                    lines.pop();
-                                }
-                                format!("{lines} : {shown_ty}\n")
+            if let Ok((built, _)) = build(&[("repl".into(), src.clone())], false) {
+                let ty = built
+                    .analysis
+                    .typed
+                    .locals
+                    .iter()
+                    .rev()
+                    .find(|l| l.name == "it")
+                    .map(|l| l.ty.clone());
+                if ty.as_ref().is_some_and(|t| *t != Ty::Unit) {
+                    let show = format!("{binding}\nprint(debug(it))");
+                    let shown_ty = built.analysis.typed.show(ty.as_ref().unwrap());
+                    let out = self.run_with(&show, false);
+                    // Keep the binding so `it` refers to the last value.
+                    return Reply::Output(match out {
+                        Ok(text) => {
+                            self.stmts.push(binding);
+                            let mut lines = text;
+                            if lines.ends_with('\n') {
+                                lines.pop();
                             }
-                            Err(e) => e,
-                        });
-                    }
+                            format!("{lines} : {shown_ty}\n")
+                        }
+                        Err(e) => e,
+                    });
                 }
-                Err(_) => {}
             }
         }
         Reply::Output(match self.run_with(input, true) {
@@ -156,7 +163,10 @@ impl Session {
         let buf = SharedBuf::default();
         let result = crate::run(&built, Vec::new(), Box::new(buf.clone()));
         let text = buf.text();
-        let new = text.get(self.shown.min(text.len())..).unwrap_or("").to_string();
+        let new = text
+            .get(self.shown.min(text.len())..)
+            .unwrap_or("")
+            .to_string();
         match result {
             Ok(()) => {
                 if keep {

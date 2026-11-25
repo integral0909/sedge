@@ -99,8 +99,15 @@ impl AdtDef {
 /// Where a function's body lives in the syntax tree.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FnSource {
-    Item { module: usize, item: usize },
-    Method { module: usize, item: usize, method: usize },
+    Item {
+        module: usize,
+        item: usize,
+    },
+    Method {
+        module: usize,
+        item: usize,
+        method: usize,
+    },
 }
 
 #[derive(Clone, Debug)]

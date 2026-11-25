@@ -58,7 +58,8 @@ pub fn parse_expr(text: &str, base: u32, next_id: &mut NodeId) -> (Option<Expr>,
     p.skip_semis();
     if !p.at(&TokenKind::Eof) {
         let span = p.peek().span;
-        p.diagnostics.push(Diagnostic::error(span, "unexpected input after expression"));
+        p.diagnostics
+            .push(Diagnostic::error(span, "unexpected input after expression"));
     }
     (e, p.diagnostics)
 }
@@ -286,7 +287,9 @@ impl<'a> Parser<'a> {
             TokenKind::Struct => Ok(Item::Struct(self.struct_decl(doc)?)),
             TokenKind::Enum => Ok(Item::Enum(self.enum_decl(doc)?)),
             TokenKind::Impl => Ok(Item::Impl(self.impl_decl()?)),
-            TokenKind::Ident(name) if name == "test" && matches!(self.nth_kind(1), TokenKind::Str(_)) => {
+            TokenKind::Ident(name)
+                if name == "test" && matches!(self.nth_kind(1), TokenKind::Str(_)) =>
+            {
                 Ok(Item::Test(self.test_decl()?))
             }
             TokenKind::Let | TokenKind::Var => {
@@ -379,11 +382,7 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-        let body = if native {
-            None
-        } else {
-            Some(self.block()?)
-        };
+        let body = if native { None } else { Some(self.block()?) };
         Ok(FnDecl {
             name,
             generics,
@@ -520,8 +519,10 @@ impl<'a> Parser<'a> {
                     [StrPart::Lit(s)] => s.clone(),
                     _ => {
                         let span = self.prev_span();
-                        self.diagnostics
-                            .push(Diagnostic::error(span, "test names cannot contain `${...}`"));
+                        self.diagnostics.push(Diagnostic::error(
+                            span,
+                            "test names cannot contain `${...}`",
+                        ));
                         String::new()
                     }
                 }
@@ -623,15 +624,11 @@ impl<'a> Parser<'a> {
             }
             match self.stmt() {
                 Ok(s) => {
-                    let block_like = matches!(
-                        &s.kind,
-                        StmtKind::While { .. } | StmtKind::For { .. }
-                    ) || matches!(&s.kind, StmtKind::Expr(e) if is_block_like(e));
+                    let block_like =
+                        matches!(&s.kind, StmtKind::While { .. } | StmtKind::For { .. })
+                            || matches!(&s.kind, StmtKind::Expr(e) if is_block_like(e));
                     stmts.push(s);
-                    if !block_like
-                        && !self.at(&TokenKind::Semi)
-                        && !self.at(&TokenKind::RBrace)
-                    {
+                    if !block_like && !self.at(&TokenKind::Semi) && !self.at(&TokenKind::RBrace) {
                         self.error_here("`;` or a line break");
                         self.recover_stmt();
                     }
@@ -987,7 +984,10 @@ impl<'a> Parser<'a> {
             TokenKind::Ident(name) => {
                 self.bump();
                 let starts_upper = name.chars().next().is_some_and(|c| c.is_uppercase());
-                if !no_struct && starts_upper && self.at(&TokenKind::LBrace) && self.looks_like_struct_lit()
+                if !no_struct
+                    && starts_upper
+                    && self.at(&TokenKind::LBrace)
+                    && self.looks_like_struct_lit()
                 {
                     return self.struct_lit(Ident { name, span });
                 }
@@ -1058,12 +1058,15 @@ impl<'a> Parser<'a> {
     /// After `Name {`: a struct literal looks like `}` or `ident :` or
     /// `ident ,` or `ident }`.
     fn looks_like_struct_lit(&self) -> bool {
-        match (self.nth_kind(1), self.nth_kind(2)) {
-            (TokenKind::RBrace, _) => true,
-            (TokenKind::Ident(_), TokenKind::Colon | TokenKind::Comma | TokenKind::RBrace) => true,
-            (TokenKind::Semi, _) => true,
-            _ => false,
-        }
+        matches!(
+            (self.nth_kind(1), self.nth_kind(2)),
+            (TokenKind::RBrace, _)
+                | (
+                    TokenKind::Ident(_),
+                    TokenKind::Colon | TokenKind::Comma | TokenKind::RBrace
+                )
+                | (TokenKind::Semi, _)
+        )
     }
 
     fn struct_lit(&mut self, name: Ident) -> PResult<Expr> {
@@ -1101,7 +1104,8 @@ impl<'a> Parser<'a> {
             match part {
                 StrPart::Lit(s) => out.push(InterpPart::Lit(s)),
                 StrPart::Hole(hole) => {
-                    let local = &self.text[(hole.lo - self.base) as usize..(hole.hi - self.base) as usize];
+                    let local =
+                        &self.text[(hole.lo - self.base) as usize..(hole.hi - self.base) as usize];
                     if local.trim().is_empty() {
                         self.diagnostics
                             .push(Diagnostic::error(hole, "empty `${}` in string"));
@@ -1124,9 +1128,7 @@ impl<'a> Parser<'a> {
         let cond = self.expr(true)?;
         let then = self.block()?;
         // Allow `else` on the line after the closing brace.
-        if self.at(&TokenKind::Semi)
-            && self.peek().implicit
-            && self.nth_kind(1) == &TokenKind::Else
+        if self.at(&TokenKind::Semi) && self.peek().implicit && self.nth_kind(1) == &TokenKind::Else
         {
             self.bump();
         }
@@ -1177,7 +1179,9 @@ impl<'a> Parser<'a> {
                 body,
                 span,
             });
-            if !self.eat(&TokenKind::Comma) && !self.at(&TokenKind::Semi) && !self.at(&TokenKind::RBrace)
+            if !self.eat(&TokenKind::Comma)
+                && !self.at(&TokenKind::Semi)
+                && !self.at(&TokenKind::RBrace)
             {
                 self.error_here("`,` or a line break between match arms");
                 return Err(());
@@ -1357,7 +1361,10 @@ impl<'a> Parser<'a> {
                         full,
                     ));
                 }
-                if enum_name.is_none() && self.at(&TokenKind::LBrace) && self.looks_like_struct_pat() {
+                if enum_name.is_none()
+                    && self.at(&TokenKind::LBrace)
+                    && self.looks_like_struct_pat()
+                {
                     return self.struct_pattern(ident);
                 }
                 if enum_name.is_some() {
@@ -1385,7 +1392,10 @@ impl<'a> Parser<'a> {
             (self.nth_kind(1), self.nth_kind(2)),
             (TokenKind::RBrace, _)
                 | (TokenKind::DotDot, _)
-                | (TokenKind::Ident(_), TokenKind::Colon | TokenKind::Comma | TokenKind::RBrace)
+                | (
+                    TokenKind::Ident(_),
+                    TokenKind::Colon | TokenKind::Comma | TokenKind::RBrace
+                )
         )
     }
 
@@ -1506,9 +1516,17 @@ mod tests {
         let (e, d) = parse_expr("1 + 2 * 3 == 7 && !false || x < 2", 0, &mut id);
         assert!(d.is_empty());
         match e.unwrap().kind {
-            ExprKind::Binary { op: BinOp::Or, lhs, .. } => match lhs.kind {
-                ExprKind::Binary { op: BinOp::And, lhs, .. } => match lhs.kind {
-                    ExprKind::Binary { op: BinOp::Eq, lhs, .. } => {
+            ExprKind::Binary {
+                op: BinOp::Or, lhs, ..
+            } => match lhs.kind {
+                ExprKind::Binary {
+                    op: BinOp::And,
+                    lhs,
+                    ..
+                } => match lhs.kind {
+                    ExprKind::Binary {
+                        op: BinOp::Eq, lhs, ..
+                    } => {
                         assert!(matches!(lhs.kind, ExprKind::Binary { op: BinOp::Add, .. }))
                     }
                     other => panic!("{other:?}"),
@@ -1526,7 +1544,13 @@ mod tests {
         );
         let b = body(&m);
         assert_eq!(b.stmts.len(), 7);
-        assert!(matches!(b.stmts[1].kind, StmtKind::Assign { op: AssignOp::Add, .. }));
+        assert!(matches!(
+            b.stmts[1].kind,
+            StmtKind::Assign {
+                op: AssignOp::Add,
+                ..
+            }
+        ));
         match &b.stmts[2].kind {
             StmtKind::Expr(e) => assert!(matches!(&e.kind, ExprKind::If { else_: Some(_), .. })),
             other => panic!("{other:?}"),
@@ -1559,7 +1583,13 @@ mod tests {
                 ExprKind::Match { arms, .. } => {
                     assert_eq!(arms.len(), 4);
                     assert!(arms[0].guard.is_some());
-                    assert!(matches!(arms[1].pattern.kind, PatternKind::Variant { enum_name: Some(_), .. }));
+                    assert!(matches!(
+                        arms[1].pattern.kind,
+                        PatternKind::Variant {
+                            enum_name: Some(_),
+                            ..
+                        }
+                    ));
                     assert!(matches!(arms[3].pattern.kind, PatternKind::Or(_)));
                 }
                 other => panic!("{other:?}"),
@@ -1592,10 +1622,22 @@ mod tests {
     #[test]
     fn reports_and_recovers() {
         let errs = errors("fn f( { }\nfn g() { let = 1 }\nfn h() { 1 < 2 < 3 }\nlet x = 1\n");
-        assert!(errs.iter().any(|e| e.contains("expected a parameter name")), "{errs:?}");
-        assert!(errs.iter().any(|e| e.contains("expected a pattern")), "{errs:?}");
-        assert!(errs.iter().any(|e| e.contains("cannot be chained")), "{errs:?}");
-        assert!(errs.iter().any(|e| e.contains("inside functions")), "{errs:?}");
+        assert!(
+            errs.iter().any(|e| e.contains("expected a parameter name")),
+            "{errs:?}"
+        );
+        assert!(
+            errs.iter().any(|e| e.contains("expected a pattern")),
+            "{errs:?}"
+        );
+        assert!(
+            errs.iter().any(|e| e.contains("cannot be chained")),
+            "{errs:?}"
+        );
+        assert!(
+            errs.iter().any(|e| e.contains("inside functions")),
+            "{errs:?}"
+        );
     }
 
     #[test]

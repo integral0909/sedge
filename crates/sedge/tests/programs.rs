@@ -7,7 +7,9 @@ use sedge::{build, check_main, run, SharedBuf};
 use std::path::{Path, PathBuf};
 
 fn files(dir: &str) -> Vec<PathBuf> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").join(dir);
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(dir);
     let mut out: Vec<PathBuf> = std::fs::read_dir(&root)
         .unwrap_or_else(|e| panic!("{}: {e}", root.display()))
         .map(|e| e.unwrap().path())
@@ -67,7 +69,11 @@ fn execute(path: &Path) -> (Outcome, Expect) {
 }
 
 fn assert_fragments(path: &Path, text: &str, fragments: &[String]) {
-    assert!(!fragments.is_empty(), "{} has no `//!` lines", path.display());
+    assert!(
+        !fragments.is_empty(),
+        "{} has no `//!` lines",
+        path.display()
+    );
     for f in fragments {
         assert!(
             text.contains(f.as_str()),
@@ -89,8 +95,12 @@ fn run_programs() {
                 path.display(),
                 expect.stdout
             )),
-            Outcome::CompileError(e) => failures.push(format!("{} failed to compile:\n{e}", path.display())),
-            Outcome::Panicked { error, .. } => failures.push(format!("{} panicked:\n{error}", path.display())),
+            Outcome::CompileError(e) => {
+                failures.push(format!("{} failed to compile:\n{e}", path.display()))
+            }
+            Outcome::Panicked { error, .. } => {
+                failures.push(format!("{} panicked:\n{error}", path.display()))
+            }
         }
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));

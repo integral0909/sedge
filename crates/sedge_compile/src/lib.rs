@@ -9,9 +9,7 @@
 //! in heap cells, so the closure and the function share them. Other
 //! captured locals are copied into the closure when it is created.
 
-use sedge_check::{
-    AdtKind, Analysis, CallRes, FnId, FnSource, LocalId, PatRes, Res, Ty, Typed,
-};
+use sedge_check::{AdtKind, Analysis, CallRes, FnId, FnSource, LocalId, PatRes, Res, Ty, Typed};
 use sedge_syntax::ast::*;
 use sedge_syntax::{SourceMap, Span};
 use sedge_vm::{Const, Op, Program, Proto, Reg, TypeInfo};
@@ -265,7 +263,11 @@ impl<'a> Compiler<'a> {
                 Item::Fn(f) => f,
                 _ => unreachable!(),
             },
-            FnSource::Method { module, item, method } => match &self.modules[module].items[item] {
+            FnSource::Method {
+                module,
+                item,
+                method,
+            } => match &self.modules[module].items[item] {
                 Item::Impl(i) => &i.methods[method],
                 _ => unreachable!(),
             },
@@ -378,7 +380,12 @@ impl<'a> Compiler<'a> {
 
     // ----- statements ------------------------------------------------------
 
-    fn block(&mut self, b: &mut Builder, block: &Block, dst: Option<Reg>) -> Result<Reg, CompileError> {
+    fn block(
+        &mut self,
+        b: &mut Builder,
+        block: &Block,
+        dst: Option<Reg>,
+    ) -> Result<Reg, CompileError> {
         let target = self.dest(b, dst);
         let saved = b.next;
         let n = block.stmts.len();
@@ -483,7 +490,13 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn for_loop(&mut self, b: &mut Builder, pattern: &Pattern, iter: &Expr, body: &Block) -> Result<(), CompileError> {
+    fn for_loop(
+        &mut self,
+        b: &mut Builder,
+        pattern: &Pattern,
+        iter: &Expr,
+        body: &Block,
+    ) -> Result<(), CompileError> {
         let saved = b.next;
         let is_range = matches!(self.ty(iter.id), Ty::Range);
         let (counter, end, arr) = if is_range {
@@ -494,13 +507,25 @@ impl<'a> Compiler<'a> {
                     self.expr(b, lo, Some(counter))?;
                     self.expr(b, hi, Some(end))?;
                     if *inclusive {
-                        b.emit(Op::AddImm { dst: end, a: end, value: 1 });
+                        b.emit(Op::AddImm {
+                            dst: end,
+                            a: end,
+                            value: 1,
+                        });
                     }
                 }
                 _ => {
                     let r = self.expr(b, iter, None)?;
-                    b.emit(Op::GetField { dst: counter, obj: r, idx: 0 });
-                    b.emit(Op::GetField { dst: end, obj: r, idx: 1 });
+                    b.emit(Op::GetField {
+                        dst: counter,
+                        obj: r,
+                        idx: 0,
+                    });
+                    b.emit(Op::GetField {
+                        dst: end,
+                        obj: r,
+                        idx: 1,
+                    });
                 }
             }
             (counter, end, None)
@@ -508,7 +533,10 @@ impl<'a> Compiler<'a> {
             let arr = b.alloc();
             self.expr(b, iter, Some(arr))?;
             let counter = b.alloc();
-            b.emit(Op::LoadInt { dst: counter, value: 0 });
+            b.emit(Op::LoadInt {
+                dst: counter,
+                value: 0,
+            });
             let end = b.alloc();
             (counter, end, Some(arr))
         };
@@ -529,7 +557,10 @@ impl<'a> Compiler<'a> {
                 obj: arr,
                 idx: counter,
             }),
-            None => b.emit(Op::Move { dst: elem, src: counter }),
+            None => b.emit(Op::Move {
+                dst: elem,
+                src: counter,
+            }),
         };
         let mut fails = Vec::new();
         self.pattern(b, pattern, elem, &mut fails)?;
@@ -560,7 +591,13 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn assign(&mut self, b: &mut Builder, target: &Expr, op: AssignOp, value: &Expr) -> Result<(), CompileError> {
+    fn assign(
+        &mut self,
+        b: &mut Builder,
+        target: &Expr,
+        op: AssignOp,
+        value: &Expr,
+    ) -> Result<(), CompileError> {
         let kind = int_kind(self.ty(target.id));
         match &target.kind {
             ExprKind::Name(_) => {
@@ -610,12 +647,20 @@ impl<'a> Compiler<'a> {
                     self.expr(b, value, None)?
                 } else {
                     let cur = b.alloc();
-                    b.emit(Op::Index { dst: cur, obj, idx: i });
+                    b.emit(Op::Index {
+                        dst: cur,
+                        obj,
+                        idx: i,
+                    });
                     let v = self.expr(b, value, None)?;
                     self.arith(b, op, kind, cur, cur, v);
                     cur
                 };
-                b.emit(Op::SetIndex { obj, idx: i, src: v });
+                b.emit(Op::SetIndex {
+                    obj,
+                    idx: i,
+                    src: v,
+                });
             }
             _ => unreachable!("checker rejects other assignment targets"),
         }
@@ -729,7 +774,11 @@ impl<'a> Compiler<'a> {
                 let obj = self.expr(b, base, None)?;
                 let i = self.expr(b, index, None)?;
                 let d = self.dest(b, dst);
-                b.emit(Op::Index { dst: d, obj, idx: i });
+                b.emit(Op::Index {
+                    dst: d,
+                    obj,
+                    idx: i,
+                });
                 d
             }
             ExprKind::Binary { op, lhs, rhs } => self.binary(b, *op, lhs, rhs, dst)?,
@@ -814,10 +863,18 @@ impl<'a> Compiler<'a> {
                 let h = b.alloc();
                 self.expr(b, hi, Some(h))?;
                 if *inclusive {
-                    b.emit(Op::AddImm { dst: h, a: h, value: 1 });
+                    b.emit(Op::AddImm {
+                        dst: h,
+                        a: h,
+                        value: 1,
+                    });
                 }
                 let d = self.dest(b, dst);
-                b.emit(Op::NewRange { dst: d, lo: l, hi: h });
+                b.emit(Op::NewRange {
+                    dst: d,
+                    lo: l,
+                    hi: h,
+                });
                 d
             }
             ExprKind::Try(inner) => {
@@ -829,7 +886,11 @@ impl<'a> Compiler<'a> {
                     tag: 0,
                     offset: 0,
                 });
-                b.emit(Op::GetField { dst: d, obj: v, idx: 0 });
+                b.emit(Op::GetField {
+                    dst: d,
+                    obj: v,
+                    idx: 0,
+                });
                 let done = b.emit(Op::Jump { offset: 0 });
                 b.patch(fail);
                 b.emit(Op::Return { src: v });
@@ -848,7 +909,12 @@ impl<'a> Compiler<'a> {
         Ok(base)
     }
 
-    fn interp(&mut self, b: &mut Builder, parts: &[InterpPart], dst: Option<Reg>) -> Result<Reg, CompileError> {
+    fn interp(
+        &mut self,
+        b: &mut Builder,
+        parts: &[InterpPart],
+        dst: Option<Reg>,
+    ) -> Result<Reg, CompileError> {
         let d = self.dest(b, dst);
         let mut first = true;
         for part in parts {
@@ -864,7 +930,11 @@ impl<'a> Compiler<'a> {
                 b.emit(Op::Move { dst: d, src: piece });
                 first = false;
             } else {
-                b.emit(Op::Concat { dst: d, a: d, b: piece });
+                b.emit(Op::Concat {
+                    dst: d,
+                    a: d,
+                    b: piece,
+                });
             }
         }
         if first {
@@ -873,7 +943,14 @@ impl<'a> Compiler<'a> {
         Ok(d)
     }
 
-    fn binary(&mut self, b: &mut Builder, op: BinOp, lhs: &Expr, rhs: &Expr, dst: Option<Reg>) -> Result<Reg, CompileError> {
+    fn binary(
+        &mut self,
+        b: &mut Builder,
+        op: BinOp,
+        lhs: &Expr,
+        rhs: &Expr,
+        dst: Option<Reg>,
+    ) -> Result<Reg, CompileError> {
         if matches!(op, BinOp::And | BinOp::Or) {
             let d = self.dest(b, dst);
             self.expr(b, lhs, Some(d))?;
@@ -893,7 +970,11 @@ impl<'a> Compiler<'a> {
                 if let Ok(imm) = i32::try_from(v) {
                     let x = self.expr(b, lhs, None)?;
                     let d = self.dest(b, dst);
-                    b.emit(Op::AddImm { dst: d, a: x, value: imm });
+                    b.emit(Op::AddImm {
+                        dst: d,
+                        a: x,
+                        value: imm,
+                    });
                     return Ok(d);
                 }
             }
@@ -906,7 +987,11 @@ impl<'a> Compiler<'a> {
             BinOp::Ne => Op::Ne { dst: d, a: x, b: y },
             BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge => {
                 // `a > b` is `b < a`.
-                let (p, q) = if matches!(op, BinOp::Gt | BinOp::Ge) { (y, x) } else { (x, y) };
+                let (p, q) = if matches!(op, BinOp::Gt | BinOp::Ge) {
+                    (y, x)
+                } else {
+                    (x, y)
+                };
                 let strict = matches!(op, BinOp::Lt | BinOp::Gt);
                 match (kind, strict) {
                     (Kind::Int, true) => Op::LtI { dst: d, a: p, b: q },
@@ -959,7 +1044,14 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn call(&mut self, b: &mut Builder, e: &Expr, callee: &Expr, args: &[Expr], dst: Option<Reg>) -> Result<Reg, CompileError> {
+    fn call(
+        &mut self,
+        b: &mut Builder,
+        e: &Expr,
+        callee: &Expr,
+        args: &[Expr],
+        dst: Option<Reg>,
+    ) -> Result<Reg, CompileError> {
         match self.typed.calls.get(&e.id).copied() {
             Some(CallRes::Direct(f)) => {
                 let base = self.sequence(b, args)?;
@@ -993,7 +1085,14 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn method_call(&mut self, b: &mut Builder, e: &Expr, recv: &Expr, args: &[Expr], dst: Option<Reg>) -> Result<Reg, CompileError> {
+    fn method_call(
+        &mut self,
+        b: &mut Builder,
+        e: &Expr,
+        recv: &Expr,
+        args: &[Expr],
+        dst: Option<Reg>,
+    ) -> Result<Reg, CompileError> {
         match self.typed.calls.get(&e.id).copied() {
             Some(CallRes::Direct(f)) => {
                 let base = b.alloc_n(args.len() + 1);
@@ -1062,14 +1161,18 @@ impl<'a> Compiler<'a> {
         });
         b.emit(Op::Return { src: 0 });
         let idx = self.program.protos.len() as u32;
-        self.program.protos.push(b.finish(def.name.clone(), n as u16, true));
+        self.program
+            .protos
+            .push(b.finish(def.name.clone(), n as u16, true));
         self.wrappers.insert(f, idx);
         idx
     }
 
     fn variant_value(&mut self, b: &mut Builder, adt: u32, tag: u32, dst: Option<Reg>) -> Reg {
         let d = self.dest(b, dst);
-        let n = self.typed.adts[adt as usize].variants()[tag as usize].fields.len();
+        let n = self.typed.adts[adt as usize].variants()[tag as usize]
+            .fields
+            .len();
         if n == 0 {
             b.emit(Op::LoadTag { dst: d, adt, tag });
             return d;
@@ -1087,7 +1190,9 @@ impl<'a> Compiler<'a> {
                     count: n as u16,
                 });
                 w.emit(Op::Return { src: n as Reg });
-                let name = self.typed.adts[adt as usize].variants()[tag as usize].name.clone();
+                let name = self.typed.adts[adt as usize].variants()[tag as usize]
+                    .name
+                    .clone();
                 let idx = self.program.protos.len() as u32;
                 self.program.protos.push(w.finish(name, n as u16, true));
                 self.variant_wrappers.insert((adt, tag), idx);
@@ -1103,7 +1208,13 @@ impl<'a> Compiler<'a> {
         d
     }
 
-    fn lambda(&mut self, b: &mut Builder, e: &Expr, body: &Expr, dst: Option<Reg>) -> Result<Reg, CompileError> {
+    fn lambda(
+        &mut self,
+        b: &mut Builder,
+        e: &Expr,
+        body: &Expr,
+        dst: Option<Reg>,
+    ) -> Result<Reg, CompileError> {
         let info = &self.typed.lambdas[&e.id];
         // Gather the captured slots into consecutive registers.
         let base = b.alloc_n(info.captures.len());
@@ -1135,9 +1246,11 @@ impl<'a> Compiler<'a> {
         let line = self.line(e.span);
         let name = format!("<lambda:{line}>");
         let idx = self.program.protos.len() as u32;
-        self.program
-            .protos
-            .push(nb.finish(name, info.params.len() as u16, self.map.lookup(e.span.lo).name == sedge_check::PRELUDE_NAME));
+        self.program.protos.push(nb.finish(
+            name,
+            info.params.len() as u16,
+            self.map.lookup(e.span.lo).name == sedge_check::PRELUDE_NAME,
+        ));
         let d = self.dest(b, dst);
         b.emit(Op::MakeClosure {
             dst: d,
@@ -1150,7 +1263,13 @@ impl<'a> Compiler<'a> {
 
     // ----- match -------------------------------------------------------------
 
-    fn match_expr(&mut self, b: &mut Builder, scrutinee: &Expr, arms: &[Arm], dst: Option<Reg>) -> Result<Reg, CompileError> {
+    fn match_expr(
+        &mut self,
+        b: &mut Builder,
+        scrutinee: &Expr,
+        arms: &[Arm],
+        dst: Option<Reg>,
+    ) -> Result<Reg, CompileError> {
         let d = self.dest(b, dst);
         let s = self.expr(b, scrutinee, None)?;
         let mut ends = Vec::new();
@@ -1179,7 +1298,13 @@ impl<'a> Compiler<'a> {
 
     /// Emits tests that jump (via `fails`) when `v` does not match, and
     /// binds the pattern's names.
-    fn pattern(&mut self, b: &mut Builder, p: &Pattern, v: Reg, fails: &mut Vec<usize>) -> Result<(), CompileError> {
+    fn pattern(
+        &mut self,
+        b: &mut Builder,
+        p: &Pattern,
+        v: Reg,
+        fails: &mut Vec<usize>,
+    ) -> Result<(), CompileError> {
         match &p.kind {
             PatternKind::Wild | PatternKind::Error => {}
             PatternKind::Name(_) => match self.typed.patterns.get(&p.id).copied() {
@@ -1192,7 +1317,11 @@ impl<'a> Compiler<'a> {
                     }
                 }
                 Some(PatRes::Variant(_, tag)) => {
-                    fails.push(b.emit(Op::JumpIfNotTag { obj: v, tag, offset: 0 }));
+                    fails.push(b.emit(Op::JumpIfNotTag {
+                        obj: v,
+                        tag,
+                        offset: 0,
+                    }));
                 }
                 _ => {}
             },
@@ -1214,7 +1343,11 @@ impl<'a> Compiler<'a> {
                 let Some(PatRes::Variant(_, tag)) = self.typed.patterns.get(&p.id).copied() else {
                     unreachable!()
                 };
-                fails.push(b.emit(Op::JumpIfNotTag { obj: v, tag, offset: 0 }));
+                fails.push(b.emit(Op::JumpIfNotTag {
+                    obj: v,
+                    tag,
+                    offset: 0,
+                }));
                 for (i, a) in args.iter().enumerate() {
                     self.subpattern(b, a, v, i, fails)?;
                 }
@@ -1256,7 +1389,14 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn subpattern(&mut self, b: &mut Builder, p: &Pattern, v: Reg, idx: usize, fails: &mut Vec<usize>) -> Result<(), CompileError> {
+    fn subpattern(
+        &mut self,
+        b: &mut Builder,
+        p: &Pattern,
+        v: Reg,
+        idx: usize,
+        fails: &mut Vec<usize>,
+    ) -> Result<(), CompileError> {
         if matches!(p.kind, PatternKind::Wild) {
             return Ok(());
         }

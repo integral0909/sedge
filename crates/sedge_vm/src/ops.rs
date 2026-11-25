@@ -152,7 +152,14 @@ fn write_seq(
     }
 }
 
-fn write_value(out: &mut String, heap: &Heap, types: &[TypeInfo], protos: &[String], v: Value, depth: usize) {
+fn write_value(
+    out: &mut String,
+    heap: &Heap,
+    types: &[TypeInfo],
+    protos: &[String],
+    v: Value,
+    depth: usize,
+) {
     if depth > MAX_DEPTH {
         out.push_str("...");
         return;
@@ -252,7 +259,10 @@ mod tests {
         let none = Value::Tag { adt: 0, tag: 1 };
         let t = h.new_tuple(vec![Value::Float(1.0), none]);
         let arr = h.new_array(vec![some, t, Value::Int(-3)]);
-        assert_eq!(display(&h, &types, &[], arr), "[Some(\"hi\"), (1.0, None), -3]");
+        assert_eq!(
+            display(&h, &types, &[], arr),
+            "[Some(\"hi\"), (1.0, None), -3]"
+        );
         assert_eq!(display(&h, &types, &[], s), "hi");
         assert_eq!(debug(&h, &types, &[], s), "\"hi\"");
     }

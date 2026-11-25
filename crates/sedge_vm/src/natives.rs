@@ -49,7 +49,10 @@ pub fn lookup(name: &str) -> Option<NativeFn> {
         "Float.to_int" => |_, a| {
             let f = a[0].as_float();
             if f.is_nan() || f < i64::MIN as f64 || f >= i64::MAX as f64 {
-                return panic(format!("{} cannot be converted to Int", ops::format_float(f)));
+                return panic(format!(
+                    "{} cannot be converted to Int",
+                    ops::format_float(f)
+                ));
             }
             Ok(Value::Int(f as i64))
         },
@@ -78,7 +81,10 @@ pub fn lookup(name: &str) -> Option<NativeFn> {
             let i = a[1].as_int();
             match usize::try_from(i).ok().and_then(|i| s.as_bytes().get(i)) {
                 Some(b) => Ok(Value::Int(*b as i64)),
-                None => panic(format!("byte index {i} is out of bounds for a string of length {}", s.len())),
+                None => panic(format!(
+                    "byte index {i} is out of bounds for a string of length {}",
+                    s.len()
+                )),
             }
         },
         "String.code" => |vm, a| match vm.heap.str(a[0]).chars().next() {
@@ -94,8 +100,14 @@ pub fn lookup(name: &str) -> Option<NativeFn> {
             })
         },
         "String.contains" => |vm, a| Ok(Value::Bool(vm.heap.str(a[0]).contains(vm.heap.str(a[1])))),
-        "String.starts_with" => |vm, a| Ok(Value::Bool(vm.heap.str(a[0]).starts_with(vm.heap.str(a[1])))),
-        "String.ends_with" => |vm, a| Ok(Value::Bool(vm.heap.str(a[0]).ends_with(vm.heap.str(a[1])))),
+        "String.starts_with" => |vm, a| {
+            Ok(Value::Bool(
+                vm.heap.str(a[0]).starts_with(vm.heap.str(a[1])),
+            ))
+        },
+        "String.ends_with" => {
+            |vm, a| Ok(Value::Bool(vm.heap.str(a[0]).ends_with(vm.heap.str(a[1]))))
+        }
         "String.split" => string_split,
         "String.lines" => |vm, a| {
             let parts: Vec<String> = vm.heap.str(a[0]).lines().map(String::from).collect();
@@ -114,7 +126,10 @@ pub fn lookup(name: &str) -> Option<NativeFn> {
             Ok(vm.heap.new_str(s))
         },
         "String.replace" => |vm, a| {
-            let s = vm.heap.str(a[0]).replace(vm.heap.str(a[1]), vm.heap.str(a[2]));
+            let s = vm
+                .heap
+                .str(a[0])
+                .replace(vm.heap.str(a[1]), vm.heap.str(a[2]));
             Ok(vm.heap.new_str(s))
         },
         "String.repeat" => |vm, a| {
@@ -171,7 +186,10 @@ pub fn lookup(name: &str) -> Option<NativeFn> {
                     arr.insert(i, a[2]);
                     Ok(Value::Unit)
                 }
-                _ => panic(format!("insertion index {i} is out of bounds for an array of length {}", arr.len())),
+                _ => panic(format!(
+                    "insertion index {i} is out of bounds for an array of length {}",
+                    arr.len()
+                )),
             }
         },
         "Array.remove" => |vm, a| {
@@ -179,7 +197,10 @@ pub fn lookup(name: &str) -> Option<NativeFn> {
             let arr = vm.heap.array_mut(a[0]);
             match usize::try_from(i) {
                 Ok(i) if i < arr.len() => Ok(arr.remove(i)),
-                _ => panic(format!("index {i} is out of bounds for an array of length {}", arr.len())),
+                _ => panic(format!(
+                    "index {i} is out of bounds for an array of length {}",
+                    arr.len()
+                )),
             }
         },
         "Array.clear" => |vm, a| {
@@ -190,7 +211,10 @@ pub fn lookup(name: &str) -> Option<NativeFn> {
             let arr = vm.heap.array(a[0]);
             let (lo, hi) = (a[1].as_int(), a[2].as_int());
             if lo < 0 || hi < lo || hi as usize > arr.len() {
-                return panic(format!("slice {lo}..{hi} is out of bounds for an array of length {}", arr.len()));
+                return panic(format!(
+                    "slice {lo}..{hi} is out of bounds for an array of length {}",
+                    arr.len()
+                ));
             }
             let part = arr[lo as usize..hi as usize].to_vec();
             Ok(vm.heap.new_array(part))
@@ -214,11 +238,19 @@ pub fn lookup(name: &str) -> Option<NativeFn> {
             Ok(vm.heap.new_str(parts.join(&sep)))
         },
         "Array.contains" => |vm, a| {
-            let found = vm.heap.array(a[0]).iter().any(|v| ops::equal(&vm.heap, *v, a[1]));
+            let found = vm
+                .heap
+                .array(a[0])
+                .iter()
+                .any(|v| ops::equal(&vm.heap, *v, a[1]));
             Ok(Value::Bool(found))
         },
         "Array.index_of" => |vm, a| {
-            let found = vm.heap.array(a[0]).iter().position(|v| ops::equal(&vm.heap, *v, a[1]));
+            let found = vm
+                .heap
+                .array(a[0])
+                .iter()
+                .position(|v| ops::equal(&vm.heap, *v, a[1]));
             Ok(match found {
                 Some(i) => vm.some(Value::Int(i as i64)),
                 None => vm.none(),
@@ -455,14 +487,19 @@ fn string_slice(vm: &mut Vm, a: &[Value]) -> R {
     let s = vm.heap.str(a[0]);
     let (lo, hi) = (a[1].as_int(), a[2].as_int());
     if lo < 0 || hi < lo || hi as usize > s.len() {
-        return panic(format!("slice {lo}..{hi} is out of bounds for a string of length {}", s.len()));
+        return panic(format!(
+            "slice {lo}..{hi} is out of bounds for a string of length {}",
+            s.len()
+        ));
     }
     match s.get(lo as usize..hi as usize) {
         Some(part) => {
             let part = part.to_string();
             Ok(vm.heap.new_str(part))
         }
-        None => panic(format!("slice {lo}..{hi} does not fall on character boundaries")),
+        None => panic(format!(
+            "slice {lo}..{hi} does not fall on character boundaries"
+        )),
     }
 }
 

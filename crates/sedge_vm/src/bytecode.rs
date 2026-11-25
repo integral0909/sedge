@@ -13,94 +13,337 @@ pub type Reg = u16;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Op {
-    LoadConst { dst: Reg, idx: u32 },
-    LoadInt { dst: Reg, value: i32 },
-    LoadBool { dst: Reg, value: bool },
-    LoadUnit { dst: Reg },
+    LoadConst {
+        dst: Reg,
+        idx: u32,
+    },
+    LoadInt {
+        dst: Reg,
+        value: i32,
+    },
+    LoadBool {
+        dst: Reg,
+        value: bool,
+    },
+    LoadUnit {
+        dst: Reg,
+    },
     /// A variant without fields.
-    LoadTag { dst: Reg, adt: u32, tag: u32 },
-    Move { dst: Reg, src: Reg },
+    LoadTag {
+        dst: Reg,
+        adt: u32,
+        tag: u32,
+    },
+    Move {
+        dst: Reg,
+        src: Reg,
+    },
 
-    AddI { dst: Reg, a: Reg, b: Reg },
-    SubI { dst: Reg, a: Reg, b: Reg },
-    MulI { dst: Reg, a: Reg, b: Reg },
-    DivI { dst: Reg, a: Reg, b: Reg },
-    RemI { dst: Reg, a: Reg, b: Reg },
-    NegI { dst: Reg, src: Reg },
+    AddI {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    SubI {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    MulI {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    DivI {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    RemI {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    NegI {
+        dst: Reg,
+        src: Reg,
+    },
     /// `dst = a + value`, for loop counters.
-    AddImm { dst: Reg, a: Reg, value: i32 },
-    AddF { dst: Reg, a: Reg, b: Reg },
-    SubF { dst: Reg, a: Reg, b: Reg },
-    MulF { dst: Reg, a: Reg, b: Reg },
-    DivF { dst: Reg, a: Reg, b: Reg },
-    RemF { dst: Reg, a: Reg, b: Reg },
-    NegF { dst: Reg, src: Reg },
-    AddG { dst: Reg, a: Reg, b: Reg },
-    SubG { dst: Reg, a: Reg, b: Reg },
-    MulG { dst: Reg, a: Reg, b: Reg },
-    DivG { dst: Reg, a: Reg, b: Reg },
-    RemG { dst: Reg, a: Reg, b: Reg },
-    NegG { dst: Reg, src: Reg },
-    Concat { dst: Reg, a: Reg, b: Reg },
-    BitAnd { dst: Reg, a: Reg, b: Reg },
-    BitOr { dst: Reg, a: Reg, b: Reg },
-    BitXor { dst: Reg, a: Reg, b: Reg },
-    Shl { dst: Reg, a: Reg, b: Reg },
-    Shr { dst: Reg, a: Reg, b: Reg },
-    Not { dst: Reg, src: Reg },
+    AddImm {
+        dst: Reg,
+        a: Reg,
+        value: i32,
+    },
+    AddF {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    SubF {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    MulF {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    DivF {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    RemF {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    NegF {
+        dst: Reg,
+        src: Reg,
+    },
+    AddG {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    SubG {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    MulG {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    DivG {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    RemG {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    NegG {
+        dst: Reg,
+        src: Reg,
+    },
+    Concat {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    BitAnd {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    BitOr {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    BitXor {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    Shl {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    Shr {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    Not {
+        dst: Reg,
+        src: Reg,
+    },
 
-    Eq { dst: Reg, a: Reg, b: Reg },
-    Ne { dst: Reg, a: Reg, b: Reg },
-    LtI { dst: Reg, a: Reg, b: Reg },
-    LeI { dst: Reg, a: Reg, b: Reg },
-    LtF { dst: Reg, a: Reg, b: Reg },
-    LeF { dst: Reg, a: Reg, b: Reg },
+    Eq {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    Ne {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    LtI {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    LeI {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    LtF {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    LeF {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
     /// Generic ordering (strings, tuples, arrays, type parameters).
-    Lt { dst: Reg, a: Reg, b: Reg },
-    Le { dst: Reg, a: Reg, b: Reg },
+    Lt {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
+    Le {
+        dst: Reg,
+        a: Reg,
+        b: Reg,
+    },
 
-    Jump { offset: i32 },
-    JumpIf { cond: Reg, offset: i32 },
-    JumpIfNot { cond: Reg, offset: i32 },
+    Jump {
+        offset: i32,
+    },
+    JumpIf {
+        cond: Reg,
+        offset: i32,
+    },
+    JumpIfNot {
+        cond: Reg,
+        offset: i32,
+    },
     /// Jumps unless `a < b` (Ints); the loop test of `for i in a..b`.
-    JumpIfNotLtI { a: Reg, b: Reg, offset: i32 },
+    JumpIfNotLtI {
+        a: Reg,
+        b: Reg,
+        offset: i32,
+    },
 
     /// Calls the closure in `base` with `argc` arguments after it; the
     /// result replaces the closure.
-    Call { base: Reg, argc: u8 },
+    Call {
+        base: Reg,
+        argc: u8,
+    },
     /// Calls a known function with arguments starting at `base`; the result
     /// goes in `base`.
-    CallDirect { func: u32, base: Reg, argc: u8 },
-    CallNative { native: u32, base: Reg, argc: u8 },
-    Return { src: Reg },
+    CallDirect {
+        func: u32,
+        base: Reg,
+        argc: u8,
+    },
+    CallNative {
+        native: u32,
+        base: Reg,
+        argc: u8,
+    },
+    Return {
+        src: Reg,
+    },
     ReturnUnit,
 
     /// Builds a closure over the values in `count` registers from `base`.
-    MakeClosure { dst: Reg, func: u32, base: Reg, count: u16 },
-    GetCapture { dst: Reg, idx: u16 },
-    NewCell { dst: Reg, src: Reg },
-    CellGet { dst: Reg, cell: Reg },
-    CellSet { cell: Reg, src: Reg },
+    MakeClosure {
+        dst: Reg,
+        func: u32,
+        base: Reg,
+        count: u16,
+    },
+    GetCapture {
+        dst: Reg,
+        idx: u16,
+    },
+    NewCell {
+        dst: Reg,
+        src: Reg,
+    },
+    CellGet {
+        dst: Reg,
+        cell: Reg,
+    },
+    CellSet {
+        cell: Reg,
+        src: Reg,
+    },
 
-    NewStruct { dst: Reg, adt: u32, base: Reg, count: u16 },
-    NewVariant { dst: Reg, adt: u32, tag: u32, base: Reg, count: u16 },
-    NewTuple { dst: Reg, base: Reg, count: u16 },
-    NewArray { dst: Reg, base: Reg, count: u16 },
-    NewRange { dst: Reg, lo: Reg, hi: Reg },
+    NewStruct {
+        dst: Reg,
+        adt: u32,
+        base: Reg,
+        count: u16,
+    },
+    NewVariant {
+        dst: Reg,
+        adt: u32,
+        tag: u32,
+        base: Reg,
+        count: u16,
+    },
+    NewTuple {
+        dst: Reg,
+        base: Reg,
+        count: u16,
+    },
+    NewArray {
+        dst: Reg,
+        base: Reg,
+        count: u16,
+    },
+    NewRange {
+        dst: Reg,
+        lo: Reg,
+        hi: Reg,
+    },
     /// Field of a struct, tuple, variant payload or range.
-    GetField { dst: Reg, obj: Reg, idx: u16 },
-    SetField { obj: Reg, idx: u16, src: Reg },
+    GetField {
+        dst: Reg,
+        obj: Reg,
+        idx: u16,
+    },
+    SetField {
+        obj: Reg,
+        idx: u16,
+        src: Reg,
+    },
     /// Jumps unless the enum value in `obj` has this tag.
-    JumpIfNotTag { obj: Reg, tag: u32, offset: i32 },
+    JumpIfNotTag {
+        obj: Reg,
+        tag: u32,
+        offset: i32,
+    },
 
     /// `arr[idx]` or `map[key]`.
-    Index { dst: Reg, obj: Reg, idx: Reg },
-    SetIndex { obj: Reg, idx: Reg, src: Reg },
-    Len { dst: Reg, obj: Reg },
+    Index {
+        dst: Reg,
+        obj: Reg,
+        idx: Reg,
+    },
+    SetIndex {
+        obj: Reg,
+        idx: Reg,
+        src: Reg,
+    },
+    Len {
+        dst: Reg,
+        obj: Reg,
+    },
     /// Converts any value to its display string.
-    ToStr { dst: Reg, src: Reg },
+    ToStr {
+        dst: Reg,
+        src: Reg,
+    },
     /// Panics with the string constant.
-    Panic { msg: u32 },
+    Panic {
+        msg: u32,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]

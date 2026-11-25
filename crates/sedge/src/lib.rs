@@ -38,7 +38,10 @@ pub fn build_one(name: &str, text: &str, color: bool) -> Result<(Built, String),
 pub fn check_main(built: &Built) -> Result<(), String> {
     let t = &built.analysis.typed;
     match t.main_fn() {
-        None => Err("error: no `main` function\n  = note: add `fn main() { ... }`, which runs first\n".into()),
+        None => Err(
+            "error: no `main` function\n  = note: add `fn main() { ... }`, which runs first\n"
+                .into(),
+        ),
         Some(f) => {
             let def = &t.fns[f as usize];
             if !def.params.is_empty() || def.ret != sedge_check::Ty::Unit {

@@ -162,11 +162,7 @@ fn test_files(files: &[String], color: bool) -> ExitCode {
             }
         }
     }
-    println!(
-        "\n{} passed, {} failed",
-        results.len() - failed,
-        failed
-    );
+    println!("\n{} passed, {} failed", results.len() - failed, failed);
     if failed == 0 {
         ExitCode::SUCCESS
     } else {

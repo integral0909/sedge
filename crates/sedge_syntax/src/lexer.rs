@@ -450,7 +450,11 @@ impl<'a> Lexer<'a> {
             (b'>', _) => (Gt, 1),
             _ => {
                 self.pos += 1;
-                self.error(start, self.pos, format!("unexpected character `{}`", c as char));
+                self.error(
+                    start,
+                    self.pos,
+                    format!("unexpected character `{}`", c as char),
+                );
                 return;
             }
         };
@@ -490,7 +494,18 @@ mod tests {
     fn inserts_semicolons_at_line_ends() {
         assert_eq!(
             kinds("let x = 1\nx + 2\n"),
-            vec![Let, id("x"), Eq, Int(1), Semi, id("x"), Plus, Int(2), Semi, Eof]
+            vec![
+                Let,
+                id("x"),
+                Eq,
+                Int(1),
+                Semi,
+                id("x"),
+                Plus,
+                Int(2),
+                Semi,
+                Eof
+            ]
         );
     }
 
@@ -498,7 +513,18 @@ mod tests {
     fn no_semicolon_after_operator_or_inside_parens() {
         assert_eq!(
             kinds("f(1,\n2) +\n3"),
-            vec![id("f"), LParen, Int(1), Comma, Int(2), RParen, Plus, Int(3), Semi, Eof]
+            vec![
+                id("f"),
+                LParen,
+                Int(1),
+                Comma,
+                Int(2),
+                RParen,
+                Plus,
+                Int(3),
+                Semi,
+                Eof
+            ]
         );
     }
 

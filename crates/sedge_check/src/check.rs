@@ -205,7 +205,10 @@ impl<'a> Checker<'a> {
                     _ => continue,
                 };
                 if self.type_names.contains_key(&name.name) {
-                    self.err(name.span, format!("the type `{}` is defined more than once", name.name));
+                    self.err(
+                        name.span,
+                        format!("the type `{}` is defined more than once", name.name),
+                    );
                     continue;
                 }
                 let id = self.t.adts.len() as AdtId;
@@ -239,7 +242,10 @@ impl<'a> Checker<'a> {
                 Some(bound) => bs.push(bound),
                 None => self.err(
                     b.span,
-                    format!("unknown bound `{}`; the available bounds are `Ord`, `Num` and `Key`", b.name),
+                    format!(
+                        "unknown bound `{}`; the available bounds are `Ord`, `Num` and `Key`",
+                        b.name
+                    ),
                 ),
             }
         }
@@ -258,7 +264,10 @@ impl<'a> Checker<'a> {
         let mut ids = Vec::new();
         for p in params {
             if scope.contains_key(&p.name.name) {
-                self.err(p.name.span, format!("duplicate type parameter `{}`", p.name.name));
+                self.err(
+                    p.name.span,
+                    format!("duplicate type parameter `{}`", p.name.name),
+                );
             }
             let id = self.new_param(&p.name, &p.bounds);
             scope.insert(p.name.name.clone(), id);
@@ -276,18 +285,23 @@ impl<'a> Checker<'a> {
             for item in &m.items {
                 match item {
                     Item::Struct(s) => {
-                        let Some(TypeName::Adt(id)) = self.type_names.get(&s.name.name).copied() else {
+                        let Some(TypeName::Adt(id)) = self.type_names.get(&s.name.name).copied()
+                        else {
                             continue;
                         };
                         if self.t.adts[id as usize].span != s.span {
                             continue; // duplicate definition
                         }
                         let params = self.generic_scope(&s.generics);
-                        self.self_type = Some(Ty::Adt(id, params.iter().map(|p| Ty::Param(*p)).collect()));
+                        self.self_type =
+                            Some(Ty::Adt(id, params.iter().map(|p| Ty::Param(*p)).collect()));
                         let mut fields: Vec<FieldDef> = Vec::new();
                         for (fi, f) in s.fields.iter().enumerate() {
                             if fields.iter().any(|x| x.name == f.name.name) {
-                                self.err(f.name.span, format!("field `{}` is declared twice", f.name.name));
+                                self.err(
+                                    f.name.span,
+                                    format!("field `{}` is declared twice", f.name.name),
+                                );
                             }
                             let ty = self.resolve_type(&f.ty);
                             self.add_use(f.name.span, Def::Field(id, fi as u32), ty.clone());
@@ -305,7 +319,8 @@ impl<'a> Checker<'a> {
                         adt.kind = AdtKind::Struct(fields);
                     }
                     Item::Enum(e) => {
-                        let Some(TypeName::Adt(id)) = self.type_names.get(&e.name.name).copied() else {
+                        let Some(TypeName::Adt(id)) = self.type_names.get(&e.name.name).copied()
+                        else {
                             continue;
                         };
                         if self.t.adts[id as usize].span != e.span {
@@ -317,10 +332,14 @@ impl<'a> Checker<'a> {
                         let mut variants: Vec<VariantDef> = Vec::new();
                         for (vi, v) in e.variants.iter().enumerate() {
                             if variants.iter().any(|x| x.name == v.name.name) {
-                                self.err(v.name.span, format!("variant `{}` is declared twice", v.name.name));
+                                self.err(
+                                    v.name.span,
+                                    format!("variant `{}` is declared twice", v.name.name),
+                                );
                                 continue;
                             }
-                            let fields: Vec<Ty> = v.fields.iter().map(|t| self.resolve_type(t)).collect();
+                            let fields: Vec<Ty> =
+                                v.fields.iter().map(|t| self.resolve_type(t)).collect();
                             let vty = if fields.is_empty() {
                                 self_ty.clone()
                             } else {
@@ -365,7 +384,10 @@ impl<'a> Checker<'a> {
     // ----- types in source ---------------------------------------------------
 
     fn lookup_param(&self, name: &str) -> Option<ParamId> {
-        self.type_scope.iter().rev().find_map(|s| s.get(name).copied())
+        self.type_scope
+            .iter()
+            .rev()
+            .find_map(|s| s.get(name).copied())
     }
 
     fn resolve_type(&mut self, te: &TypeExpr) -> Ty {
@@ -387,7 +409,10 @@ impl<'a> Checker<'a> {
                 let args: Vec<Ty> = args.iter().map(|t| self.resolve_type(t)).collect();
                 if let Some(p) = self.lookup_param(&name.name) {
                     if !args.is_empty() {
-                        self.err(te.span, format!("type parameter `{}` takes no arguments", name.name));
+                        self.err(
+                            te.span,
+                            format!("type parameter `{}` takes no arguments", name.name),
+                        );
                     }
                     self.add_use(name.span, Def::Param(p), Ty::Param(p));
                     return Ty::Param(p);
@@ -396,7 +421,10 @@ impl<'a> Checker<'a> {
                     if let Some(t) = self.self_type.clone() {
                         return t;
                     }
-                    self.err(name.span, "`Self` can only be used inside `impl` blocks and type declarations");
+                    self.err(
+                        name.span,
+                        "`Self` can only be used inside `impl` blocks and type declarations",
+                    );
                     return Ty::Error;
                 }
                 let Some(tn) = self.type_names.get(&name.name).copied() else {
@@ -433,7 +461,11 @@ impl<'a> Checker<'a> {
                         }
                         Ty::Never
                     }
-                    TypeName::Int | TypeName::Float | TypeName::Bool | TypeName::Str | TypeName::Range => {
+                    TypeName::Int
+                    | TypeName::Float
+                    | TypeName::Bool
+                    | TypeName::Str
+                    | TypeName::Range => {
                         if !expect_args(0, self) {
                             return Ty::Error;
                         }
@@ -503,9 +535,20 @@ impl<'a> Checker<'a> {
                             continue;
                         }
                         if f.self_param.is_some() {
-                            self.err(f.span, "`self` parameters are only allowed in `impl` blocks");
+                            self.err(
+                                f.span,
+                                "`self` parameters are only allowed in `impl` blocks",
+                            );
                         }
-                        let id = self.signature(f, None, &[], FnSource::Item { module: mi, item: ii });
+                        let id = self.signature(
+                            f,
+                            None,
+                            &[],
+                            FnSource::Item {
+                                module: mi,
+                                item: ii,
+                            },
+                        );
                         self.t.globals.insert(f.name.name.clone(), id);
                     }
                     Item::Impl(imp) => self.collect_impl(imp, mi, ii),
@@ -525,7 +568,10 @@ impl<'a> Checker<'a> {
 
     fn collect_impl(&mut self, imp: &ImplDecl, mi: usize, ii: usize) {
         let Some(tn) = self.type_names.get(&imp.target.name).copied() else {
-            self.err(imp.target.span, format!("cannot find type `{}`", imp.target.name));
+            self.err(
+                imp.target.span,
+                format!("cannot find type `{}`", imp.target.name),
+            );
             return;
         };
         let (con, arity) = match tn {
@@ -536,7 +582,10 @@ impl<'a> Checker<'a> {
             TypeName::Array => (TypeCon::Array, 1),
             TypeName::Map => (TypeCon::Map, 2),
             TypeName::Range | TypeName::Never => {
-                self.err(imp.target.span, format!("methods cannot be added to `{}`", imp.target.name));
+                self.err(
+                    imp.target.span,
+                    format!("methods cannot be added to `{}`", imp.target.name),
+                );
                 return;
             }
             TypeName::Adt(id) => (TypeCon::Adt(id), self.t.adts[id as usize].params.len()),
@@ -544,7 +593,10 @@ impl<'a> Checker<'a> {
         if !self.is_prelude() && !matches!(con, TypeCon::Adt(_)) {
             self.err(
                 imp.target.span,
-                format!("methods can only be added to types declared in this program, not `{}`", imp.target.name),
+                format!(
+                    "methods can only be added to types declared in this program, not `{}`",
+                    imp.target.name
+                ),
             );
             return;
         }
@@ -575,7 +627,10 @@ impl<'a> Checker<'a> {
             if self.t.methods.contains_key(&key) {
                 self.err(
                     f.name.span,
-                    format!("`{}.{}` is defined more than once", imp.target.name, f.name.name),
+                    format!(
+                        "`{}.{}` is defined more than once",
+                        imp.target.name, f.name.name
+                    ),
                 );
                 continue;
             }
@@ -635,7 +690,10 @@ impl<'a> Checker<'a> {
             if impl_params.iter().any(|p| p.name == w.param.name) {
                 continue;
             }
-            match own.iter().find(|p| self.t.params[**p as usize].name == w.param.name) {
+            match own
+                .iter()
+                .find(|p| self.t.params[**p as usize].name == w.param.name)
+            {
                 Some(&p) => {
                     for b in &w.bounds {
                         match Bound::from_name(&b.name) {
@@ -644,7 +702,10 @@ impl<'a> Checker<'a> {
                         }
                     }
                 }
-                None => self.err(w.param.span, format!("`{}` is not a type parameter here", w.param.name)),
+                None => self.err(
+                    w.param.span,
+                    format!("`{}` is not a type parameter here", w.param.name),
+                ),
             }
         }
         generics.extend(own);
@@ -657,23 +718,37 @@ impl<'a> Checker<'a> {
             names.push("self".to_string());
         }
         for p in &f.params {
-            let ty = p.ty.as_ref().map(|t| self.resolve_type(t)).unwrap_or(Ty::Error);
+            let ty =
+                p.ty.as_ref()
+                    .map(|t| self.resolve_type(t))
+                    .unwrap_or(Ty::Error);
             params.push(ty);
             names.push(p.name.name.clone());
         }
-        let ret = f.ret.as_ref().map(|t| self.resolve_type(t)).unwrap_or(Ty::Unit);
+        let ret = f
+            .ret
+            .as_ref()
+            .map(|t| self.resolve_type(t))
+            .unwrap_or(Ty::Unit);
         self.type_scope.pop();
         self.type_scope.pop();
         self.self_type = None;
         if f.body.is_none() && !self.is_prelude() {
-            self.err(f.span, "`native` functions can only be declared in the prelude");
+            self.err(
+                f.span,
+                "`native` functions can only be declared in the prelude",
+            );
         }
         let name = match owner {
             Some((_, target)) => format!("{}.{}", target, f.name.name),
             None => f.name.name.clone(),
         };
         let id = self.t.fns.len() as FnId;
-        self.add_use(f.name.span, Def::Fn(id), Ty::func(params.clone(), ret.clone()));
+        self.add_use(
+            f.name.span,
+            Def::Fn(id),
+            Ty::func(params.clone(), ret.clone()),
+        );
         self.t.fns.push(FnDef {
             name,
             short_name: f.name.name.clone(),
@@ -702,7 +777,11 @@ impl<'a> Checker<'a> {
                 Item::Fn(f) => f,
                 _ => unreachable!(),
             },
-            FnSource::Method { module, item, method } => match &self.modules[module].items[item] {
+            FnSource::Method {
+                module,
+                item,
+                method,
+            } => match &self.modules[module].items[item] {
                 Item::Impl(i) => &i.methods[method],
                 _ => unreachable!(),
             },
@@ -735,20 +814,23 @@ impl<'a> Checker<'a> {
             let mut locals = Vec::new();
             let mut offset = 0;
             if let Some(span) = decl.self_param {
-                let l = self.declare(
-                    "self",
-                    false,
-                    def.params[0].clone(),
-                    span,
-                );
+                let l = self.declare("self", false, def.params[0].clone(), span);
                 locals.push(l);
                 offset = 1;
             }
             for (i, p) in decl.params.iter().enumerate() {
                 if self.scopes.last().unwrap().contains_key(&p.name.name) {
-                    self.err(p.name.span, format!("parameter `{}` is declared twice", p.name.name));
+                    self.err(
+                        p.name.span,
+                        format!("parameter `{}` is declared twice", p.name.name),
+                    );
                 }
-                let l = self.declare(&p.name.name, false, def.params[i + offset].clone(), p.name.span);
+                let l = self.declare(
+                    &p.name.name,
+                    false,
+                    def.params[i + offset].clone(),
+                    p.name.span,
+                );
                 locals.push(l);
             }
             self.t.fns[id].param_locals = locals;
@@ -798,7 +880,11 @@ impl<'a> Checker<'a> {
     }
 
     fn lookup_local(&mut self, name: &str) -> Option<LocalId> {
-        let id = self.scopes.iter().rev().find_map(|s| s.get(name).copied())?;
+        let id = self
+            .scopes
+            .iter()
+            .rev()
+            .find_map(|s| s.get(name).copied())?;
         let def_ctx = self.local_ctx[&id];
         let cur = self.ctxs.len() - 1;
         if def_ctx < cur {
@@ -844,7 +930,10 @@ impl<'a> Checker<'a> {
             }
             map.insert(p, v);
         }
-        (params.iter().map(|t| t.subst(&map)).collect(), ret.subst(&map))
+        (
+            params.iter().map(|t| t.subst(&map)).collect(),
+            ret.subst(&map),
+        )
     }
 
     fn instantiate_adt(&mut self, id: AdtId) -> (Vec<Ty>, HashMap<ParamId, Ty>) {
@@ -910,7 +999,10 @@ impl<'a> Checker<'a> {
                             let mut d = Diagnostic::error(at, "mismatched types")
                                 .with_label(format!("expected `{es}`, found `()`"));
                             if let Some(last) = b.stmts.last() {
-                                d = d.with_secondary(last.span, "the block ends with this statement, which has no value");
+                                d = d.with_secondary(
+                                    last.span,
+                                    "the block ends with this statement, which has no value",
+                                );
                             }
                             self.emit(d);
                         }
@@ -984,7 +1076,9 @@ impl<'a> Checker<'a> {
                         let s = self.t.show(&other);
                         self.emit(
                             Diagnostic::error(iter.span, format!("`{s}` cannot be iterated"))
-                                .with_note("`for` loops work over arrays and ranges such as `0..n`"),
+                                .with_note(
+                                    "`for` loops work over arrays and ranges such as `0..n`",
+                                ),
                         );
                         Ty::Error
                     }
@@ -1070,9 +1164,14 @@ impl<'a> Checker<'a> {
                     let def = self.t.locals[l as usize].clone();
                     if !def.mutable {
                         self.emit(
-                            Diagnostic::error(target.span, format!("cannot assign twice to `{name}`"))
-                                .with_secondary(def.span, "declared with `let` here")
-                                .with_note(format!("declare it with `var {name}` to make it reassignable")),
+                            Diagnostic::error(
+                                target.span,
+                                format!("cannot assign twice to `{name}`"),
+                            )
+                            .with_secondary(def.span, "declared with `let` here")
+                            .with_note(format!(
+                                "declare it with `var {name}` to make it reassignable"
+                            )),
                         );
                     }
                     self.t.names.insert(target.id, Res::Local(l));
@@ -1082,7 +1181,10 @@ impl<'a> Checker<'a> {
                 }
                 None => {
                     if self.t.globals.contains_key(name) {
-                        self.err(target.span, format!("cannot assign to the function `{name}`"));
+                        self.err(
+                            target.span,
+                            format!("cannot assign to the function `{name}`"),
+                        );
                     } else {
                         self.err(target.span, format!("cannot find `{name}` in this scope"));
                     }
@@ -1092,7 +1194,10 @@ impl<'a> Checker<'a> {
             ExprKind::Field { .. } | ExprKind::Index { .. } => self.expr(target, None),
             ExprKind::TupleField { .. } => {
                 self.expr(target, None);
-                self.err(target.span, "tuple elements cannot be assigned; tuples are immutable");
+                self.err(
+                    target.span,
+                    "tuple elements cannot be assigned; tuples are immutable",
+                );
                 Ty::Error
             }
             ExprKind::SelfValue => {
@@ -1165,7 +1270,10 @@ impl<'a> Checker<'a> {
                     ty
                 }
                 None => {
-                    self.err(e.span, "`self` is only available in methods that take `self`");
+                    self.err(
+                        e.span,
+                        "`self` is only available in methods that take `self`",
+                    );
                     Ty::Error
                 }
             },
@@ -1182,7 +1290,11 @@ impl<'a> Checker<'a> {
                         None => {
                             self.err(
                                 *index_span,
-                                format!("this tuple has {} elements; there is no `.{}`", ts.len(), index),
+                                format!(
+                                    "this tuple has {} elements; there is no `.{}`",
+                                    ts.len(),
+                                    index
+                                ),
                             );
                             Ty::Error
                         }
@@ -1194,7 +1306,10 @@ impl<'a> Checker<'a> {
                     }
                     other => {
                         let s = self.t.show(&other);
-                        self.err(*index_span, format!("`.{index}` needs a tuple, but this is `{s}`"));
+                        self.err(
+                            *index_span,
+                            format!("`.{index}` needs a tuple, but this is `{s}`"),
+                        );
                         Ty::Error
                     }
                 }
@@ -1219,8 +1334,9 @@ impl<'a> Checker<'a> {
                     Ty::Str => {
                         self.expr(index, None);
                         self.emit(
-                            Diagnostic::error(e.span, "strings cannot be indexed")
-                                .with_note("use `s.chars()`, `s.byte_at(i)` or `s.slice(start, end)`"),
+                            Diagnostic::error(e.span, "strings cannot be indexed").with_note(
+                                "use `s.chars()`, `s.byte_at(i)` or `s.slice(start, end)`",
+                            ),
                         );
                         Ty::Error
                     }
@@ -1306,7 +1422,9 @@ impl<'a> Checker<'a> {
                 Ty::Tuple(tys)
             }
             ExprKind::StructLit { name, fields } => self.struct_lit(e, name, fields),
-            ExprKind::Lambda { params, ret, body } => self.lambda(e, params, ret.as_ref(), body, expected),
+            ExprKind::Lambda { params, ret, body } => {
+                self.lambda(e, params, ret.as_ref(), body, expected)
+            }
             ExprKind::Range { lo, hi, .. } => {
                 self.expr(lo, Some(&Ty::Int));
                 self.expr(hi, Some(&Ty::Int));
@@ -1389,7 +1507,11 @@ impl<'a> Checker<'a> {
             .map(|t| t.subst(&map))
             .collect();
         let ty = Ty::Adt(adt, args);
-        let ty = if fields.is_empty() { ty } else { Ty::func(fields, ty) };
+        let ty = if fields.is_empty() {
+            ty
+        } else {
+            Ty::func(fields, ty)
+        };
         let span = match &e.kind {
             ExprKind::Field { name, .. } => name.span,
             _ => e.span,
@@ -1425,13 +1547,19 @@ impl<'a> Checker<'a> {
                     if self.t.methods.contains_key(&(con, name.name.clone())) {
                         self.err(
                             e.span,
-                            format!("`{}.{}` is a function; call it with `(...)`", self.t.adts[adt as usize].name, name.name),
+                            format!(
+                                "`{}.{}` is a function; call it with `(...)`",
+                                self.t.adts[adt as usize].name, name.name
+                            ),
                         );
                         return Ty::Error;
                     }
                 }
                 let tname = self.t.adts[adt as usize].name.clone();
-                self.err(name.span, format!("`{tname}` has no variant or function named `{}`", name.name));
+                self.err(
+                    name.span,
+                    format!("`{tname}` has no variant or function named `{}`", name.name),
+                );
                 return Ty::Error;
             }
         }
@@ -1447,11 +1575,22 @@ impl<'a> Checker<'a> {
                     return ty;
                 }
                 let tname = def.name.clone();
-                if self.t.methods.contains_key(&(TypeCon::Adt(adt), name.name.clone())) {
-                    self.err(e.span, format!("`{}` is a method; call it with `.{}()`", name.name, name.name));
+                if self
+                    .t
+                    .methods
+                    .contains_key(&(TypeCon::Adt(adt), name.name.clone()))
+                {
+                    self.err(
+                        e.span,
+                        format!(
+                            "`{}` is a method; call it with `.{}()`",
+                            name.name, name.name
+                        ),
+                    );
                     return Ty::Error;
                 }
-                let mut d = Diagnostic::error(name.span, format!("`{tname}` has no field `{}`", name.name));
+                let mut d =
+                    Diagnostic::error(name.span, format!("`{tname}` has no field `{}`", name.name));
                 let names: Vec<&str> = def.fields().iter().map(|f| f.name.as_str()).collect();
                 if let Some(s) = suggest(&name.name, names.iter().copied()) {
                     d = d.with_label(format!("did you mean `{s}`?"));
@@ -1472,7 +1611,13 @@ impl<'a> Checker<'a> {
                 let s = self.t.show(&other);
                 let con = other.con();
                 if con.is_some_and(|c| self.t.methods.contains_key(&(c, name.name.clone()))) {
-                    self.err(e.span, format!("`{}` is a method; call it with `.{}()`", name.name, name.name));
+                    self.err(
+                        e.span,
+                        format!(
+                            "`{}` is a method; call it with `.{}()`",
+                            name.name, name.name
+                        ),
+                    );
                 } else {
                     self.err(name.span, format!("`{s}` has no field `{}`", name.name));
                 }
@@ -1497,17 +1642,15 @@ impl<'a> Checker<'a> {
     fn check_args(&mut self, call_span: Span, params: &[Ty], args: &[Expr], what: &str) {
         if params.len() != args.len() {
             let n = params.len();
-            self.emit(
-                Diagnostic::error(
-                    call_span,
-                    format!(
-                        "{what} takes {n} argument{} but {} {} supplied",
-                        if n == 1 { "" } else { "s" },
-                        args.len(),
-                        if args.len() == 1 { "was" } else { "were" }
-                    ),
+            self.emit(Diagnostic::error(
+                call_span,
+                format!(
+                    "{what} takes {n} argument{} but {} {} supplied",
+                    if n == 1 { "" } else { "s" },
+                    args.len(),
+                    if args.len() == 1 { "was" } else { "were" }
                 ),
-            );
+            ));
             for a in args {
                 self.expr(a, None);
             }
@@ -1542,8 +1685,13 @@ impl<'a> Checker<'a> {
                 if let Some(TypeName::Adt(adt)) = self.type_names.get(name).copied() {
                     if !self.t.adts[adt as usize].is_enum() {
                         self.emit(
-                            Diagnostic::error(callee.span, format!("`{name}` is a struct, not a function"))
-                                .with_note(format!("construct it with `{name} {{ field: value, ... }}`")),
+                            Diagnostic::error(
+                                callee.span,
+                                format!("`{name}` is a struct, not a function"),
+                            )
+                            .with_note(format!(
+                                "construct it with `{name} {{ field: value, ... }}`"
+                            )),
                         );
                         for a in args {
                             self.expr(a, None);
@@ -1590,7 +1738,14 @@ impl<'a> Checker<'a> {
         }
     }
 
-    fn construct_variant(&mut self, e: &Expr, callee: &Expr, adt: AdtId, v: u32, args: &[Expr]) -> Ty {
+    fn construct_variant(
+        &mut self,
+        e: &Expr,
+        callee: &Expr,
+        adt: AdtId,
+        v: u32,
+        args: &[Expr],
+    ) -> Ty {
         let (targs, map) = self.instantiate_adt(adt);
         let def = &self.t.adts[adt as usize];
         let vdef = &def.variants()[v as usize];
@@ -1603,7 +1758,11 @@ impl<'a> Checker<'a> {
             ExprKind::Field { name, .. } => name.span,
             _ => callee.span,
         };
-        self.add_use(span, Def::Variant(adt, v), Ty::func(fields.clone(), ty.clone()));
+        self.add_use(
+            span,
+            Def::Variant(adt, v),
+            Ty::func(fields.clone(), ty.clone()),
+        );
         if fields.is_empty() {
             self.emit(
                 Diagnostic::error(e.span, format!("`{vname}` has no fields"))
@@ -1648,7 +1807,10 @@ impl<'a> Checker<'a> {
                 return Ty::Error;
             };
             let Some(&f) = self.t.methods.get(&(con, name.name.clone())) else {
-                self.err(name.span, format!("`{tname}` has no function named `{}`", name.name));
+                self.err(
+                    name.span,
+                    format!("`{tname}` has no function named `{}`", name.name),
+                );
                 for a in args {
                     self.expr(a, None);
                 }
@@ -1658,8 +1820,11 @@ impl<'a> Checker<'a> {
             self.add_use(name.span, Def::Fn(f), Ty::func(ps.clone(), r.clone()));
             if self.t.fns[f as usize].has_self {
                 self.emit(
-                    Diagnostic::error(e.span, format!("`{tname}.{}` is a method that takes `self`", name.name))
-                        .with_note(format!("call it on a value: `x.{}(...)`", name.name)),
+                    Diagnostic::error(
+                        e.span,
+                        format!("`{tname}.{}` is a method that takes `self`", name.name),
+                    )
+                    .with_note(format!("call it on a value: `x.{}(...)`", name.name)),
                 );
                 for a in args {
                     self.expr(a, None);
@@ -1715,7 +1880,8 @@ impl<'a> Checker<'a> {
                 if let Ty::Adt(adt, targs) = &r {
                     let def = &self.t.adts[*adt as usize];
                     if let Some(i) = def.fields().iter().position(|f| f.name == name.name) {
-                        let map: HashMap<ParamId, Ty> = def.params.iter().copied().zip(targs.clone()).collect();
+                        let map: HashMap<ParamId, Ty> =
+                            def.params.iter().copied().zip(targs.clone()).collect();
                         let fty = def.fields()[i].ty.subst(&map);
                         self.t.calls.insert(e.id, CallRes::FieldClosure(i as u32));
                         self.add_use(name.span, Def::Field(*adt, i as u32), fty.clone());
@@ -1723,7 +1889,10 @@ impl<'a> Checker<'a> {
                     }
                 }
                 let s = self.t.show(&r);
-                let mut d = Diagnostic::error(name.span, format!("no method named `{}` on `{s}`", name.name));
+                let mut d = Diagnostic::error(
+                    name.span,
+                    format!("no method named `{}` on `{s}`", name.name),
+                );
                 if let Some(c) = con {
                     let names: Vec<String> = self
                         .t
@@ -1763,7 +1932,12 @@ impl<'a> Checker<'a> {
             BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge => {
                 let l = self.expr(lhs, None);
                 self.expr(rhs, Some(&l));
-                self.oblige(&l, Oblig::Bound(Bound::Ord), e.span, &format!("`{}`", op.symbol()));
+                self.oblige(
+                    &l,
+                    Oblig::Bound(Bound::Ord),
+                    e.span,
+                    &format!("`{}`", op.symbol()),
+                );
                 Ty::Bool
             }
             BinOp::Add => {
@@ -1791,8 +1965,11 @@ impl<'a> Checker<'a> {
             Some(TypeName::Adt(a)) if !self.t.adts[a as usize].is_enum() => a,
             Some(TypeName::Adt(_)) => {
                 self.emit(
-                    Diagnostic::error(name.span, format!("`{}` is an enum, not a struct", name.name))
-                        .with_note("construct one of its variants instead"),
+                    Diagnostic::error(
+                        name.span,
+                        format!("`{}` is an enum, not a struct", name.name),
+                    )
+                    .with_note("construct one of its variants instead"),
                 );
                 for f in fields {
                     self.expr(&f.value, None);
@@ -1822,7 +1999,10 @@ impl<'a> Checker<'a> {
             match defs.iter().position(|d| d.name == f.name.name) {
                 Some(i) => {
                     if !seen.insert(i) {
-                        self.err(f.name.span, format!("field `{}` is given twice", f.name.name));
+                        self.err(
+                            f.name.span,
+                            format!("field `{}` is given twice", f.name.name),
+                        );
                     }
                     let ty = defs[i].ty.subst(&map);
                     self.add_use(f.name.span, Def::Field(adt, i as u32), ty.clone());
@@ -1928,8 +2108,11 @@ impl<'a> Checker<'a> {
                 if self.u.unify(&ret, &want).is_err() {
                     let r = self.show(&ret);
                     self.emit(
-                        Diagnostic::error(e.span, "`?` on an `Option` needs the function to return an `Option`")
-                            .with_label(format!("this function returns `{r}`")),
+                        Diagnostic::error(
+                            e.span,
+                            "`?` on an `Option` needs the function to return an `Option`",
+                        )
+                        .with_label(format!("this function returns `{r}`")),
                     );
                 }
                 args[0].clone()
@@ -1953,7 +2136,10 @@ impl<'a> Checker<'a> {
             }
             other => {
                 let s = self.t.show(&other);
-                self.err(e.span, format!("`?` works on `Option` and `Result` values, not `{s}`"));
+                self.err(
+                    e.span,
+                    format!("`?` works on `Option` and `Result` values, not `{s}`"),
+                );
                 Ty::Error
             }
         }
@@ -1961,7 +2147,13 @@ impl<'a> Checker<'a> {
 
     // ----- patterns and match ------------------------------------------------
 
-    fn match_expr(&mut self, e: &Expr, scrutinee: &Expr, arms: &[Arm], expected: Option<&Ty>) -> Ty {
+    fn match_expr(
+        &mut self,
+        e: &Expr,
+        scrutinee: &Expr,
+        arms: &[Arm],
+        expected: Option<&Ty>,
+    ) -> Ty {
         let sty = self.expr(scrutinee, None);
         let ty = match expected {
             Some(t) => t.clone(),
@@ -2010,9 +2202,12 @@ impl<'a> Checker<'a> {
         if let Some(w) = exhaust::missing(&self.t.adts, &resolver, &[vec![row]], &rty) {
             let text = exhaust::show(&self.t.adts, &w);
             self.emit(
-                Diagnostic::error(p.span, format!("this pattern does not match every value in {what}"))
-                    .with_label(format!("`{text}` is not covered"))
-                    .with_note("use `match` to handle the other cases"),
+                Diagnostic::error(
+                    p.span,
+                    format!("this pattern does not match every value in {what}"),
+                )
+                .with_label(format!("`{text}` is not covered"))
+                .with_note("use `match` to handle the other cases"),
             );
         }
     }
@@ -2048,12 +2243,17 @@ impl<'a> Checker<'a> {
                     };
                     if fitting.len() == 1 {
                         let (adt, v) = fitting[0];
-                        let nfields = self.t.adts[adt as usize].variants()[v as usize].fields.len();
+                        let nfields = self.t.adts[adt as usize].variants()[v as usize]
+                            .fields
+                            .len();
                         if nfields > 0 {
                             let blanks = vec!["_"; nfields].join(", ");
                             self.emit(
-                                Diagnostic::error(p.span, format!("the variant `{name}` has fields"))
-                                    .with_note(format!("match it with `{name}({blanks})`")),
+                                Diagnostic::error(
+                                    p.span,
+                                    format!("the variant `{name}` has fields"),
+                                )
+                                .with_note(format!("match it with `{name}({blanks})`")),
                             );
                             return;
                         }
@@ -2069,7 +2269,10 @@ impl<'a> Checker<'a> {
                     }
                 }
                 if binds.iter().any(|(n, ..)| n == name) {
-                    self.err(p.span, format!("`{name}` is bound more than once in this pattern"));
+                    self.err(
+                        p.span,
+                        format!("`{name}` is bound more than once in this pattern"),
+                    );
                     return;
                 }
                 if let Some(ex) = existing {
@@ -2094,10 +2297,17 @@ impl<'a> Checker<'a> {
                     Some(en) => match self.type_names.get(&en.name).copied() {
                         Some(TypeName::Adt(a)) => {
                             self.add_use(en.span, Def::Adt(a), Ty::Unit);
-                            match self.t.adts[a as usize].variants().iter().position(|v| v.name == name.name) {
+                            match self.t.adts[a as usize]
+                                .variants()
+                                .iter()
+                                .position(|v| v.name == name.name)
+                            {
                                 Some(v) => Some((a, v as u32)),
                                 None => {
-                                    self.err(name.span, format!("`{}` has no variant `{}`", en.name, name.name));
+                                    self.err(
+                                        name.span,
+                                        format!("`{}` has no variant `{}`", en.name, name.name),
+                                    );
                                     None
                                 }
                             }
@@ -2110,7 +2320,9 @@ impl<'a> Checker<'a> {
                     None => match self.variants.get(&name.name).cloned() {
                         Some(cands) => {
                             let fitting: Vec<_> = match self.u.shallow(ty) {
-                                Ty::Adt(id, _) => cands.iter().copied().filter(|(a, _)| *a == id).collect(),
+                                Ty::Adt(id, _) => {
+                                    cands.iter().copied().filter(|(a, _)| *a == id).collect()
+                                }
                                 _ => cands.clone(),
                             };
                             match fitting.len() {
@@ -2123,11 +2335,20 @@ impl<'a> Checker<'a> {
                             }
                         }
                         None => {
-                            if let Some(TypeName::Adt(a)) = self.type_names.get(&name.name).copied() {
+                            if let Some(TypeName::Adt(a)) = self.type_names.get(&name.name).copied()
+                            {
                                 if !self.t.adts[a as usize].is_enum() {
                                     self.emit(
-                                        Diagnostic::error(name.span, format!("`{}` is a struct", name.name))
-                                            .with_note(format!("match it with `{} {{ field, .. }}`", name.name)),
+                                        Diagnostic::error(
+                                            name.span,
+                                            format!("`{}` is a struct", name.name),
+                                        )
+                                        .with_note(
+                                            format!(
+                                                "match it with `{} {{ field, .. }}`",
+                                                name.name
+                                            ),
+                                        ),
                                     );
                                 }
                             } else {
@@ -2199,7 +2420,10 @@ impl<'a> Checker<'a> {
                             self.pattern(fp, &fty, binds, existing);
                         }
                         None => {
-                            self.err(fname.span, format!("`{}` has no field `{}`", name.name, fname.name));
+                            self.err(
+                                fname.span,
+                                format!("`{}` has no field `{}`", name.name, fname.name),
+                            );
                             self.pattern(fp, &Ty::Error, binds, existing);
                         }
                     }
@@ -2212,8 +2436,11 @@ impl<'a> Checker<'a> {
                         .map(|(_, d)| format!("`{}`", d.name))
                         .collect();
                     self.emit(
-                        Diagnostic::error(p.span, format!("pattern does not mention {}", missing.join(", ")))
-                            .with_note("add `..` to ignore the other fields"),
+                        Diagnostic::error(
+                            p.span,
+                            format!("pattern does not mention {}", missing.join(", ")),
+                        )
+                        .with_note("add `..` to ignore the other fields"),
                     );
                 }
             }
@@ -2272,11 +2499,16 @@ impl<'a> Checker<'a> {
             },
             PatternKind::Variant { args, .. } => match self.t.patterns.get(&p.id) {
                 Some(PatRes::Variant(a, v)) => {
-                    let n = self.t.adts[*a as usize].variants()[*v as usize].fields.len();
+                    let n = self.t.adts[*a as usize].variants()[*v as usize]
+                        .fields
+                        .len();
                     if n != args.len() {
                         return Pat::Wild;
                     }
-                    Pat::Ctor(Ctor::Variant(*a, *v), args.iter().map(|x| self.lower_pattern(x)).collect())
+                    Pat::Ctor(
+                        Ctor::Variant(*a, *v),
+                        args.iter().map(|x| self.lower_pattern(x)).collect(),
+                    )
                 }
                 _ => Pat::Wild,
             },
@@ -2313,13 +2545,23 @@ impl<'a> Checker<'a> {
             for arm in arms {
                 let pat = self.lower_pattern(&arm.pattern);
                 let alts: Vec<(Pat, Span)> = match (&pat, &arm.pattern.kind) {
-                    (Pat::Or(ps), PatternKind::Or(asts)) => {
-                        ps.iter().cloned().zip(asts.iter().map(|a| a.span)).collect()
-                    }
+                    (Pat::Or(ps), PatternKind::Or(asts)) => ps
+                        .iter()
+                        .cloned()
+                        .zip(asts.iter().map(|a| a.span))
+                        .collect(),
                     _ => vec![(pat.clone(), arm.pattern.span)],
                 };
                 for (alt, span) in alts {
-                    if exhaust::useful(&self.t.adts, &resolver, &rows, &[alt.clone()], &[sty.clone()]).is_none() {
+                    if exhaust::useful(
+                        &self.t.adts,
+                        &resolver,
+                        &rows,
+                        std::slice::from_ref(&alt),
+                        std::slice::from_ref(&sty),
+                    )
+                    .is_none()
+                    {
                         warnings.push(span);
                     } else if arm.guard.is_none() {
                         rows.push(vec![alt]);
@@ -2367,14 +2609,21 @@ impl<'a> Checker<'a> {
             if let Err(msg) = self.satisfies(&ty, ob.kind) {
                 let s = self.t.show(&ty);
                 let mut d = match ob.kind {
-                    Oblig::Num => Diagnostic::error(ob.span, format!("{} needs `Int` or `Float`, found `{s}`", ob.what)),
+                    Oblig::Num => Diagnostic::error(
+                        ob.span,
+                        format!("{} needs `Int` or `Float`, found `{s}`", ob.what),
+                    ),
                     Oblig::Addable => Diagnostic::error(
                         ob.span,
                         format!("{} needs `Int`, `Float` or `String`, found `{s}`", ob.what),
                     ),
                     Oblig::Bound(b) => Diagnostic::error(
                         ob.span,
-                        format!("{} needs a type that is `{}`, found `{s}`", ob.what, b.name()),
+                        format!(
+                            "{} needs a type that is `{}`, found `{s}`",
+                            ob.what,
+                            b.name()
+                        ),
                     ),
                 };
                 if let Some(m) = msg {
@@ -2420,7 +2669,9 @@ impl<'a> Checker<'a> {
                     "declare the bound on the type parameter: `{}: Ord`",
                     self.t.params[*p as usize].name
                 ))),
-                _ => Err(Some("`Int`, `Float`, `String`, and tuples and arrays of them are `Ord`".into())),
+                _ => Err(Some(
+                    "`Int`, `Float`, `String`, and tuples and arrays of them are `Ord`".into(),
+                )),
             },
             Oblig::Bound(Bound::Key) => match ty {
                 Ty::Int | Ty::Str | Ty::Bool => Ok(()),
@@ -2459,7 +2710,8 @@ impl<'a> Checker<'a> {
                 self.t.patterns.insert(pid, r);
             }
         }
-        self.diags.sort_by_key(|d| (d.span.lo, d.severity == sedge_syntax::Severity::Warning));
+        self.diags
+            .sort_by_key(|d| (d.span.lo, d.severity == sedge_syntax::Severity::Warning));
     }
 }
 
@@ -2475,7 +2727,10 @@ fn default_vars(t: &Ty) -> Ty {
         Ty::Map(k, v) => Ty::Map(Box::new(default_vars(k)), Box::new(default_vars(v))),
         Ty::Tuple(ts) => Ty::Tuple(ts.iter().map(default_vars).collect()),
         Ty::Adt(id, ts) => Ty::Adt(*id, ts.iter().map(default_vars).collect()),
-        Ty::Fn(ps, r) => Ty::Fn(ps.iter().map(default_vars).collect(), Box::new(default_vars(r))),
+        Ty::Fn(ps, r) => Ty::Fn(
+            ps.iter().map(default_vars).collect(),
+            Box::new(default_vars(r)),
+        ),
         other => other.clone(),
     }
 }
@@ -2493,7 +2748,7 @@ pub fn suggest<'b>(name: &str, candidates: impl Iterator<Item = &'b str>) -> Opt
             continue;
         }
         let d = edit_distance(name, c);
-        if d <= limit && best.map_or(true, |(bd, bc)| d < bd || (d == bd && c < bc)) {
+        if d <= limit && best.is_none_or(|(bd, bc)| d < bd || (d == bd && c < bc)) {
             best = Some((d, c));
         }
     }

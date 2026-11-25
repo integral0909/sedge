@@ -7,7 +7,11 @@ fn run(src: &str) -> Analysis {
 fn ok(src: &str) -> Analysis {
     let a = run(src);
     let errors: Vec<_> = a.diagnostics.iter().filter(|d| d.is_error()).collect();
-    assert!(errors.is_empty(), "unexpected errors:\n{}", a.render_diagnostics(false));
+    assert!(
+        errors.is_empty(),
+        "unexpected errors:\n{}",
+        a.render_diagnostics(false)
+    );
     a
 }
 
@@ -16,7 +20,8 @@ fn fails(src: &str, needle: &str) {
     let a = run(src);
     let text = a.render_diagnostics(false);
     assert!(
-        a.diagnostics.iter().any(|d| d.is_error() && (d.message.contains(needle) || d.render(&a.map, false).contains(needle))),
+        a.diagnostics.iter().any(|d| d.is_error()
+            && (d.message.contains(needle) || d.render(&a.map, false).contains(needle))),
         "expected an error containing {needle:?}, got:\n{text}"
     );
 }
@@ -49,9 +54,21 @@ fn inference_through_generics_and_lambdas() {
         let first = names.get(\"a\").unwrap_or(0.0)
         print(first)
     }");
-    let total = a.typed.locals.iter().rev().find(|l| l.name == "total").unwrap();
+    let total = a
+        .typed
+        .locals
+        .iter()
+        .rev()
+        .find(|l| l.name == "total")
+        .unwrap();
     assert_eq!(total.ty, Ty::Float);
-    let names = a.typed.locals.iter().rev().find(|l| l.name == "names").unwrap();
+    let names = a
+        .typed
+        .locals
+        .iter()
+        .rev()
+        .find(|l| l.name == "names")
+        .unwrap();
     assert_eq!(a.typed.show(&names.ty), "Map[String, Float]");
 }
 
@@ -120,31 +137,70 @@ fn try_operator() {
 
 #[test]
 fn mismatches() {
-    fails("fn main() { let x: Int = \"a\" }", "expected `Int`, found `String`");
-    fails("fn main() { let x = 1 + 1.0 }", "expected `Int`, found `Float`");
-    fails("fn f() -> Int { }\nfn main() {}", "expected `Int`, found `()`");
-    fails("fn main() { let x: Int = if true { 1 } }", "`if` without `else`");
+    fails(
+        "fn main() { let x: Int = \"a\" }",
+        "expected `Int`, found `String`",
+    );
+    fails(
+        "fn main() { let x = 1 + 1.0 }",
+        "expected `Int`, found `Float`",
+    );
+    fails(
+        "fn f() -> Int { }\nfn main() {}",
+        "expected `Int`, found `()`",
+    );
+    fails(
+        "fn main() { let x: Int = if true { 1 } }",
+        "`if` without `else`",
+    );
     fails("fn main() { print(nope) }", "cannot find `nope`");
-    fails("fn main() { let count = 1\n print(cuont) }", "did you mean `count`?");
+    fails(
+        "fn main() { let count = 1\n print(cuont) }",
+        "did you mean `count`?",
+    );
     fails("fn main() { let x = 1\n x = 2 }", "cannot assign twice");
     fails("fn main() { break }", "outside of a loop");
-    fails("fn main() { [1, 2].len(3) }", "takes 0 arguments but 1 was supplied");
-    fails("fn main() { let s = \"a\"\n s.nope() }", "no method named `nope`");
+    fails(
+        "fn main() { [1, 2].len(3) }",
+        "takes 0 arguments but 1 was supplied",
+    );
+    fails(
+        "fn main() { let s = \"a\"\n s.nope() }",
+        "no method named `nope`",
+    );
 }
 
 #[test]
 fn operator_obligations() {
-    fails("fn main() { let x = true + false }", "needs `Int`, `Float` or `String`");
-    fails("fn f[T](a: T, b: T) -> Bool { a < b }\nfn main() {}", "`T: Ord`");
-    fails("struct P { x: Int }\nfn main() { let a = P { x: 1 } < P { x: 2 } }", "`Ord`");
+    fails(
+        "fn main() { let x = true + false }",
+        "needs `Int`, `Float` or `String`",
+    );
+    fails(
+        "fn f[T](a: T, b: T) -> Bool { a < b }\nfn main() {}",
+        "`T: Ord`",
+    );
+    fails(
+        "struct P { x: Int }\nfn main() { let a = P { x: 1 } < P { x: 2 } }",
+        "`Ord`",
+    );
     ok("fn main() { let f = fn(a, b) => a * b\n print(f(2, 3)) }");
 }
 
 #[test]
 fn struct_literal_errors() {
-    fails("struct P { x: Int, y: Int }\nfn main() { let p = P { x: 1 } }", "missing field `y`");
-    fails("struct P { x: Int }\nfn main() { let p = P { x: 1, z: 2 } }", "has no field `z`");
-    fails("struct P { x: Int }\nfn main() { let p = P { x: 1 }\n print(p.y) }", "has no field `y`");
+    fails(
+        "struct P { x: Int, y: Int }\nfn main() { let p = P { x: 1 } }",
+        "missing field `y`",
+    );
+    fails(
+        "struct P { x: Int }\nfn main() { let p = P { x: 1, z: 2 } }",
+        "has no field `z`",
+    );
+    fails(
+        "struct P { x: Int }\nfn main() { let p = P { x: 1 }\n print(p.y) }",
+        "has no field `y`",
+    );
 }
 
 #[test]
@@ -161,7 +217,10 @@ fn exhaustiveness() {
         "fn f(x: (Bool, Bool)) -> Int { match x { (true, _) => 1, (_, true) => 2 } }\nfn main() {}",
         "`(false, false)` is not covered",
     );
-    fails("fn f(n: Int) -> Int { match n { 0 => 1, 1 => 2 } }\nfn main() {}", "`_` is not covered");
+    fails(
+        "fn f(n: Int) -> Int { match n { 0 => 1, 1 => 2 } }\nfn main() {}",
+        "`_` is not covered",
+    );
     fails(
         "fn f(n: Option[Int]) -> Int { match n { Some(x) if x > 0 => x, None => 0 } }\nfn main() {}",
         "`Some(_)` is not covered",
@@ -202,16 +261,21 @@ fn or_patterns_bind_consistently() {
 
 #[test]
 fn recursion_and_mutual_recursion() {
-    ok("fn even(n: Int) -> Bool { if n == 0 { true } else { odd(n - 1) } }
+    ok(
+        "fn even(n: Int) -> Bool { if n == 0 { true } else { odd(n - 1) } }
         fn odd(n: Int) -> Bool { if n == 0 { false } else { even(n - 1) } }
         enum List[T] { Cons(T, List[T]), Nil }
         fn len[T](l: List[T]) -> Int { match l { Cons(_, rest) => 1 + len(rest), Nil => 0 } }
-        fn main() { print(len(Cons(1, Cons(2, Nil)))) }");
+        fn main() { print(len(Cons(1, Cons(2, Nil)))) }",
+    );
 }
 
 #[test]
 fn methods_on_builtins_only_in_prelude() {
-    fails("impl Int { fn double(self) -> Int { self * 2 } }\nfn main() {}", "only be added to types declared");
+    fails(
+        "impl Int { fn double(self) -> Int { self * 2 } }\nfn main() {}",
+        "only be added to types declared",
+    );
 }
 
 #[test]
@@ -221,7 +285,8 @@ fn unused_values_warn() {
 
 #[test]
 fn hover_index_records_uses() {
-    let a = ok("fn add(a: Int, b: Int) -> Int { a + b }\nfn main() { let s = add(1, 2)\n print(s) }");
+    let a =
+        ok("fn add(a: Int, b: Int) -> Int { a + b }\nfn main() { let s = add(1, 2)\n print(s) }");
     let uses_of_add = a
         .typed
         .uses
@@ -230,4 +295,3 @@ fn hover_index_records_uses() {
         .count();
     assert_eq!(uses_of_add, 2, "definition and call");
 }
-

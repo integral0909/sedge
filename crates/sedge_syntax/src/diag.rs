@@ -80,7 +80,11 @@ impl Diagnostic {
             Severity::Warning => ("warning", yellow),
         };
         let mut out = String::new();
-        let _ = writeln!(out, "{bold}{kcolor}{kind}{reset}{bold}: {}{reset}", self.message);
+        let _ = writeln!(
+            out,
+            "{bold}{kcolor}{kind}{reset}{bold}: {}{reset}",
+            self.message
+        );
         let mut labels = vec![(self.span, self.label.clone().unwrap_or_default(), true)];
         for l in &self.secondary {
             labels.push((l.span, l.message.clone(), false));
@@ -103,7 +107,9 @@ impl Diagnostic {
             let width = if end.line == start.line {
                 (end.col.saturating_sub(start.col)).max(1) as usize
             } else {
-                (line.chars().count() + 1).saturating_sub(start.col as usize).max(1)
+                (line.chars().count() + 1)
+                    .saturating_sub(start.col as usize)
+                    .max(1)
             };
             let marker = if primary { "^" } else { "-" };
             let mcolor = if primary { kcolor } else { blue };

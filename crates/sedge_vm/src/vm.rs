@@ -228,16 +228,19 @@ impl Vm {
             .iter()
             .copied()
             .chain(self.consts.iter().copied())
-            .chain(
-                self.frames
-                    .iter()
-                    .filter_map(|f| f.closure.map(Value::Obj)),
-            )
+            .chain(self.frames.iter().filter_map(|f| f.closure.map(Value::Obj)))
             .collect::<Vec<_>>();
         self.heap.collect(roots.into_iter());
     }
 
-    fn push_frame(&mut self, func: u32, base: usize, ret: usize, argc: usize, closure: Option<Gc>) -> Result<(), RuntimeError> {
+    fn push_frame(
+        &mut self,
+        func: u32,
+        base: usize,
+        ret: usize,
+        argc: usize,
+        closure: Option<Gc>,
+    ) -> Result<(), RuntimeError> {
         if self.frames.len() >= self.max_frames {
             return Err(self.error(ErrorKind::Panic("stack overflow".into())));
         }
@@ -429,25 +432,47 @@ impl Vm {
                     s.push_str(ys);
                     reg!(dst) = self.heap.new_str(s);
                 }
-                Op::BitAnd { dst, a, b } => reg!(dst) = Value::Int(reg!(a).as_int() & reg!(b).as_int()),
-                Op::BitOr { dst, a, b } => reg!(dst) = Value::Int(reg!(a).as_int() | reg!(b).as_int()),
-                Op::BitXor { dst, a, b } => reg!(dst) = Value::Int(reg!(a).as_int() ^ reg!(b).as_int()),
+                Op::BitAnd { dst, a, b } => {
+                    reg!(dst) = Value::Int(reg!(a).as_int() & reg!(b).as_int())
+                }
+                Op::BitOr { dst, a, b } => {
+                    reg!(dst) = Value::Int(reg!(a).as_int() | reg!(b).as_int())
+                }
+                Op::BitXor { dst, a, b } => {
+                    reg!(dst) = Value::Int(reg!(a).as_int() ^ reg!(b).as_int())
+                }
                 Op::Shl { dst, a, b } | Op::Shr { dst, a, b } => {
                     let n = reg!(b).as_int();
                     if !(0..64).contains(&n) {
                         fail!(format!("shift by {n} is out of range (0 to 63)"));
                     }
                     let x = reg!(a).as_int();
-                    reg!(dst) = Value::Int(if matches!(op, Op::Shl { .. }) { x << n } else { x >> n });
+                    reg!(dst) = Value::Int(if matches!(op, Op::Shl { .. }) {
+                        x << n
+                    } else {
+                        x >> n
+                    });
                 }
                 Op::Not { dst, src } => reg!(dst) = Value::Bool(!reg!(src).as_bool()),
 
-                Op::Eq { dst, a, b } => reg!(dst) = Value::Bool(ops::equal(&self.heap, reg!(a), reg!(b))),
-                Op::Ne { dst, a, b } => reg!(dst) = Value::Bool(!ops::equal(&self.heap, reg!(a), reg!(b))),
-                Op::LtI { dst, a, b } => reg!(dst) = Value::Bool(reg!(a).as_int() < reg!(b).as_int()),
-                Op::LeI { dst, a, b } => reg!(dst) = Value::Bool(reg!(a).as_int() <= reg!(b).as_int()),
-                Op::LtF { dst, a, b } => reg!(dst) = Value::Bool(reg!(a).as_float() < reg!(b).as_float()),
-                Op::LeF { dst, a, b } => reg!(dst) = Value::Bool(reg!(a).as_float() <= reg!(b).as_float()),
+                Op::Eq { dst, a, b } => {
+                    reg!(dst) = Value::Bool(ops::equal(&self.heap, reg!(a), reg!(b)))
+                }
+                Op::Ne { dst, a, b } => {
+                    reg!(dst) = Value::Bool(!ops::equal(&self.heap, reg!(a), reg!(b)))
+                }
+                Op::LtI { dst, a, b } => {
+                    reg!(dst) = Value::Bool(reg!(a).as_int() < reg!(b).as_int())
+                }
+                Op::LeI { dst, a, b } => {
+                    reg!(dst) = Value::Bool(reg!(a).as_int() <= reg!(b).as_int())
+                }
+                Op::LtF { dst, a, b } => {
+                    reg!(dst) = Value::Bool(reg!(a).as_float() < reg!(b).as_float())
+                }
+                Op::LeF { dst, a, b } => {
+                    reg!(dst) = Value::Bool(reg!(a).as_float() <= reg!(b).as_float())
+                }
                 Op::Lt { dst, a, b } => {
                     let (x, y) = (reg!(a), reg!(b));
                     let lt = match (x, y) {
@@ -495,14 +520,22 @@ impl Vm {
                     self.push_frame(func, abs + 1, abs, argc as usize, Some(g))?;
                     reload!();
                 }
-                Op::CallDirect { func, base: b, argc } => {
+                Op::CallDirect {
+                    func,
+                    base: b,
+                    argc,
+                } => {
                     safepoint!();
                     self.frames[fi].ip = ip;
                     let abs = base + b as usize;
                     self.push_frame(func, abs, abs, argc as usize, None)?;
                     reload!();
                 }
-                Op::CallNative { native, base: b, argc } => {
+                Op::CallNative {
+                    native,
+                    base: b,
+                    argc,
+                } => {
                     self.frames[fi].ip = ip;
                     let abs = base + b as usize;
                     let mut args = [Value::Unit; 8];
@@ -511,8 +544,12 @@ impl Vm {
                     let f = self.natives[native as usize];
                     match f(self, &args[..n]) {
                         Ok(v) => self.stack[abs] = v,
-                        Err(NativeError::Panic(msg)) => return Err(self.error(ErrorKind::Panic(msg))),
-                        Err(NativeError::Exit(code)) => return Err(self.error(ErrorKind::Exit(code))),
+                        Err(NativeError::Panic(msg)) => {
+                            return Err(self.error(ErrorKind::Panic(msg)))
+                        }
+                        Err(NativeError::Exit(code)) => {
+                            return Err(self.error(ErrorKind::Exit(code)))
+                        }
                     }
                 }
                 Op::Return { src } => {
@@ -533,7 +570,12 @@ impl Vm {
                     reload!();
                 }
 
-                Op::MakeClosure { dst, func, base: b, count } => {
+                Op::MakeClosure {
+                    dst,
+                    func,
+                    base: b,
+                    count,
+                } => {
                     let start = base + b as usize;
                     let captures: Box<[Value]> = self.stack[start..start + count as usize].into();
                     let g = self.heap.alloc(Object::Closure { func, captures });
@@ -563,22 +605,41 @@ impl Vm {
                     }
                 }
 
-                Op::NewStruct { dst, adt, base: b, count } => {
+                Op::NewStruct {
+                    dst,
+                    adt,
+                    base: b,
+                    count,
+                } => {
                     let start = base + b as usize;
                     let fields: Box<[Value]> = self.stack[start..start + count as usize].into();
                     reg!(dst) = Value::Obj(self.heap.alloc(Object::Struct { adt, fields }));
                 }
-                Op::NewVariant { dst, adt, tag, base: b, count } => {
+                Op::NewVariant {
+                    dst,
+                    adt,
+                    tag,
+                    base: b,
+                    count,
+                } => {
                     let start = base + b as usize;
                     let fields: Box<[Value]> = self.stack[start..start + count as usize].into();
                     reg!(dst) = Value::Obj(self.heap.alloc(Object::Variant { adt, tag, fields }));
                 }
-                Op::NewTuple { dst, base: b, count } => {
+                Op::NewTuple {
+                    dst,
+                    base: b,
+                    count,
+                } => {
                     let start = base + b as usize;
                     let fields: Box<[Value]> = self.stack[start..start + count as usize].into();
                     reg!(dst) = Value::Obj(self.heap.alloc(Object::Tuple(fields)));
                 }
-                Op::NewArray { dst, base: b, count } => {
+                Op::NewArray {
+                    dst,
+                    base: b,
+                    count,
+                } => {
                     let start = base + b as usize;
                     let items = self.stack[start..start + count as usize].to_vec();
                     reg!(dst) = self.heap.new_array(items);
@@ -589,9 +650,9 @@ impl Vm {
                 }
                 Op::GetField { dst, obj, idx } => {
                     reg!(dst) = match self.heap.get(reg!(obj).as_obj()) {
-                        Object::Struct { fields, .. } | Object::Variant { fields, .. } | Object::Tuple(fields) => {
-                            fields[idx as usize]
-                        }
+                        Object::Struct { fields, .. }
+                        | Object::Variant { fields, .. }
+                        | Object::Tuple(fields) => fields[idx as usize],
                         Object::Range(lo, hi) => Value::Int(if idx == 0 { *lo } else { *hi }),
                         other => panic!("GetField on {other:?}"),
                     };
@@ -625,7 +686,10 @@ impl Vm {
                             let n = i.as_int();
                             match usize::try_from(n).ok().and_then(|n| items.get(n)) {
                                 Some(v) => *v,
-                                None => fail!(format!("index {n} is out of bounds for an array of length {}", items.len())),
+                                None => fail!(format!(
+                                    "index {n} is out of bounds for an array of length {}",
+                                    items.len()
+                                )),
                             }
                         }
                         Object::Map(m) => {
@@ -656,7 +720,9 @@ impl Vm {
                             let len = items.len();
                             match usize::try_from(n).ok().and_then(|n| items.get_mut(n)) {
                                 Some(slot) => *slot = v,
-                                None => fail!(format!("index {n} is out of bounds for an array of length {len}")),
+                                None => fail!(format!(
+                                    "index {n} is out of bounds for an array of length {len}"
+                                )),
                             }
                         }
                         Object::Map(m) => m.insert(key.unwrap(), i, v),
@@ -669,7 +735,8 @@ impl Vm {
                 }
                 Op::ToStr { dst, src } => {
                     let v = reg!(src);
-                    let is_str = matches!(v, Value::Obj(g) if matches!(self.heap.get(g), Object::Str(_)));
+                    let is_str =
+                        matches!(v, Value::Obj(g) if matches!(self.heap.get(g), Object::Str(_)));
                     reg!(dst) = if is_str {
                         v
                     } else {

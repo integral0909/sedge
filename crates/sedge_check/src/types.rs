@@ -100,7 +100,10 @@ impl Ty {
             Ty::Map(k, v) => Ty::Map(Box::new(k.subst(map)), Box::new(v.subst(map))),
             Ty::Tuple(ts) => Ty::Tuple(ts.iter().map(|t| t.subst(map)).collect()),
             Ty::Adt(id, ts) => Ty::Adt(*id, ts.iter().map(|t| t.subst(map)).collect()),
-            Ty::Fn(ps, r) => Ty::Fn(ps.iter().map(|t| t.subst(map)).collect(), Box::new(r.subst(map))),
+            Ty::Fn(ps, r) => Ty::Fn(
+                ps.iter().map(|t| t.subst(map)).collect(),
+                Box::new(r.subst(map)),
+            ),
             other => other.clone(),
         }
     }
@@ -312,7 +315,8 @@ mod tests {
         let mut u = Unifier::default();
         let a = u.fresh();
         let b = u.fresh();
-        u.unify(&Ty::array(a.clone()), &Ty::array(b.clone())).unwrap();
+        u.unify(&Ty::array(a.clone()), &Ty::array(b.clone()))
+            .unwrap();
         u.unify(&b, &Ty::Int).unwrap();
         assert_eq!(u.resolve(&a), Ty::Int);
         assert!(u.unify(&a, &Ty::Str).is_err());
@@ -342,10 +346,17 @@ mod tests {
     #[test]
     fn display() {
         let t = Ty::func(
-            vec![Ty::array(Ty::Param(0)), Ty::Map(Box::new(Ty::Str), Box::new(Ty::Int))],
+            vec![
+                Ty::array(Ty::Param(0)),
+                Ty::Map(Box::new(Ty::Str), Box::new(Ty::Int)),
+            ],
             Ty::Adt(0, vec![Ty::Tuple(vec![Ty::Int, Ty::Float])]),
         );
-        let s = Display { ty: &t, names: &NoNames }.to_string();
+        let s = Display {
+            ty: &t,
+            names: &NoNames,
+        }
+        .to_string();
         assert_eq!(s, "fn([T], Map[String, Int]) -> Option[(Int, Float)]");
     }
 }

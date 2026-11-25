@@ -17,7 +17,10 @@ pub enum Value {
     Int(i64),
     Float(f64),
     /// An enum variant without fields.
-    Tag { adt: u32, tag: u32 },
+    Tag {
+        adt: u32,
+        tag: u32,
+    },
     Obj(Gc),
 }
 
@@ -56,10 +59,20 @@ pub enum Object {
     Str(String),
     Array(Vec<Value>),
     Map(OrderedMap),
-    Struct { adt: u32, fields: Box<[Value]> },
-    Variant { adt: u32, tag: u32, fields: Box<[Value]> },
+    Struct {
+        adt: u32,
+        fields: Box<[Value]>,
+    },
+    Variant {
+        adt: u32,
+        tag: u32,
+        fields: Box<[Value]>,
+    },
     Tuple(Box<[Value]>),
-    Closure { func: u32, captures: Box<[Value]> },
+    Closure {
+        func: u32,
+        captures: Box<[Value]>,
+    },
     Cell(Value),
     Range(i64, i64),
 }
@@ -155,11 +168,17 @@ impl Heap {
     }
 
     pub fn get(&self, g: Gc) -> &Object {
-        self.slots[g.0 as usize].obj.as_ref().expect("use after free")
+        self.slots[g.0 as usize]
+            .obj
+            .as_ref()
+            .expect("use after free")
     }
 
     pub fn get_mut(&mut self, g: Gc) -> &mut Object {
-        self.slots[g.0 as usize].obj.as_mut().expect("use after free")
+        self.slots[g.0 as usize]
+            .obj
+            .as_mut()
+            .expect("use after free")
     }
 
     pub fn should_collect(&self) -> bool {

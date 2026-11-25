@@ -149,7 +149,11 @@ pub fn useful(
     tys: &[Ty],
 ) -> Option<Vec<Pat>> {
     if q.is_empty() {
-        return if rows.is_empty() { Some(Vec::new()) } else { None };
+        return if rows.is_empty() {
+            Some(Vec::new())
+        } else {
+            None
+        };
     }
     let rows = expand_head(rows);
     let ty = &tys[0];
@@ -227,14 +231,18 @@ pub fn useful(
 
 /// A value of type `ty` that no row matches, if there is one.
 pub fn missing(adts: &[AdtDef], resolve: Resolve, rows: &[Vec<Pat>], ty: &Ty) -> Option<Pat> {
-    useful(adts, resolve, rows, &[Pat::Wild], &[ty.clone()]).map(|mut w| w.remove(0))
+    useful(adts, resolve, rows, &[Pat::Wild], std::slice::from_ref(ty)).map(|mut w| w.remove(0))
 }
 
 /// Shows a witness the way it would be written in a pattern.
 pub fn show(adts: &[AdtDef], p: &Pat) -> String {
     match p {
         Pat::Wild => "_".to_string(),
-        Pat::Or(alts) => alts.iter().map(|a| show(adts, a)).collect::<Vec<_>>().join(" | "),
+        Pat::Or(alts) => alts
+            .iter()
+            .map(|a| show(adts, a))
+            .collect::<Vec<_>>()
+            .join(" | "),
         Pat::Ctor(c, args) => match c {
             Ctor::Bool(b) => b.to_string(),
             Ctor::Int(i) => i.to_string(),

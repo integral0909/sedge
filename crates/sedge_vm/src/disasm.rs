@@ -68,24 +68,53 @@ fn show_op(program: &Program, ip: usize, op: &Op) -> String {
         Op::AddImm { dst, a, value } => format!("r{dst} = r{a} + {value}"),
         Op::JumpIf { cond, offset } => format!("if r{cond} goto {}", target(ip, offset)),
         Op::JumpIfNot { cond, offset } => format!("unless r{cond} goto {}", target(ip, offset)),
-        Op::JumpIfNotLtI { a, b, offset } => format!("unless r{a} < r{b} goto {}", target(ip, offset)),
+        Op::JumpIfNotLtI { a, b, offset } => {
+            format!("unless r{a} < r{b} goto {}", target(ip, offset))
+        }
         Op::Jump { offset } => format!("goto {}", target(ip, offset)),
         Op::Call { base, argc } => format!("r{base} = call r{base}(r{}..+{argc})", base + 1),
-        Op::CallDirect { func, base, argc } => format!("r{base} = {}(r{base}..+{argc})", fname(func)),
+        Op::CallDirect { func, base, argc } => {
+            format!("r{base} = {}(r{base}..+{argc})", fname(func))
+        }
         Op::CallNative { native, base, argc } => {
-            format!("r{base} = native {}(r{base}..+{argc})", program.natives[native as usize])
+            format!(
+                "r{base} = native {}(r{base}..+{argc})",
+                program.natives[native as usize]
+            )
         }
         Op::Return { src } => format!("return r{src}"),
         Op::ReturnUnit => "return".into(),
-        Op::MakeClosure { dst, func, base, count } => {
+        Op::MakeClosure {
+            dst,
+            func,
+            base,
+            count,
+        } => {
             format!("r{dst} = closure {} [r{base}..+{count}]", fname(func))
         }
-        Op::NewStruct { dst, adt, base, count } => {
-            format!("r{dst} = {} {{ r{base}..+{count} }}", program.types[adt as usize].name)
+        Op::NewStruct {
+            dst,
+            adt,
+            base,
+            count,
+        } => {
+            format!(
+                "r{dst} = {} {{ r{base}..+{count} }}",
+                program.types[adt as usize].name
+            )
         }
-        Op::NewVariant { dst, adt, tag, base, count } => {
+        Op::NewVariant {
+            dst,
+            adt,
+            tag,
+            base,
+            count,
+        } => {
             let t = &program.types[adt as usize];
-            format!("r{dst} = {}.{}(r{base}..+{count})", t.name, t.variants[tag as usize])
+            format!(
+                "r{dst} = {}.{}(r{base}..+{count})",
+                t.name, t.variants[tag as usize]
+            )
         }
         Op::JumpIfNotTag { obj, tag, offset } => {
             format!("unless tag(r{obj}) == {tag} goto {}", target(ip, offset))
