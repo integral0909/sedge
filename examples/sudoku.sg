@@ -1,0 +1,109 @@
+// A backtracking Sudoku solver with constraint bitmasks.
+
+struct Board {
+    cells: [Int],
+    rows: [Int],
+    cols: [Int],
+    boxes: [Int],
+}
+
+fn box_of(r: Int, c: Int) -> Int { (r / 3) * 3 + c / 3 }
+
+impl Board {
+    fn parse(text: String) -> Board {
+        let b = Board {
+            cells: Array.filled(0, 81),
+            rows: Array.filled(0, 9),
+            cols: Array.filled(0, 9),
+            boxes: Array.filled(0, 9),
+        }
+        var i = 0
+        for ch in text.chars() {
+            if ch == "." || ch == "0" {
+                i += 1
+            } else {
+                match ch.parse_int() {
+                    Some(d) => {
+                        b.place(i, d)
+                        i += 1
+                    }
+                    None => {}
+                }
+            }
+        }
+        b
+    }
+
+    fn place(self, i: Int, d: Int) {
+        let r = i / 9
+        let c = i % 9
+        let bit = 1 << d
+        self.cells[i] = d
+        self.rows[r] = self.rows[r] | bit
+        self.cols[c] = self.cols[c] | bit
+        self.boxes[box_of(r, c)] = self.boxes[box_of(r, c)] | bit
+    }
+
+    fn clear(self, i: Int, d: Int) {
+        let r = i / 9
+        let c = i % 9
+        let mask = 1023 ^ (1 << d)
+        self.cells[i] = 0
+        self.rows[r] = self.rows[r] & mask
+        self.cols[c] = self.cols[c] & mask
+        self.boxes[box_of(r, c)] = self.boxes[box_of(r, c)] & mask
+    }
+
+    fn used(self, i: Int) -> Int {
+        let r = i / 9
+        let c = i % 9
+        self.rows[r] | self.cols[c] | self.boxes[box_of(r, c)]
+    }
+
+    /// Fills the empty cell with the fewest candidates first.
+    fn solve(self) -> Bool {
+        var best = -1
+        var best_count = 10
+        for i in 0..81 {
+            if self.cells[i] == 0 {
+                let used = self.used(i)
+                var count = 0
+                for d in 1..=9 {
+                    if used & (1 << d) == 0 { count += 1 }
+                }
+                if count < best_count {
+                    best = i
+                    best_count = count
+                }
+            }
+        }
+        if best < 0 { return true }
+        let used = self.used(best)
+        for d in 1..=9 {
+            if used & (1 << d) == 0 {
+                self.place(best, d)
+                if self.solve() { return true }
+                self.clear(best, d)
+            }
+        }
+        false
+    }
+
+    fn show(self) -> String {
+        var out = []
+        for r in 0..9 {
+            out.push(self.cells.slice(r * 9, r * 9 + 9).join(" "))
+        }
+        out.join("\n")
+    }
+}
+
+fn main() {
+    let puzzle = "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79"
+    let b = Board.parse(puzzle)
+    if b.solve() {
+        print(b.show())
+    } else {
+        print("no solution")
+    }
+}

@@ -1,0 +1,69 @@
+enum Token { Number(Int), Word(String), Punct(String), End }
+
+fn describe(t: Token) -> String {
+    match t {
+        Number(0) => "zero",
+        Number(n) if n < 0 => "negative ${n}",
+        Number(n) => "number ${n}",
+        Word("let" | "fn") => "keyword",
+        Word(w) => "word ${w}",
+        Punct(p) => "punct ${p}",
+        End => "end",
+    }
+}
+
+fn classify(p: (Int, Int)) -> String {
+    match p {
+        (0, 0) => "origin",
+        (0, _) | (_, 0) => "axis",
+        (x, y) if x == y => "diagonal",
+        _ => "plane",
+    }
+}
+
+fn first_two(xs: [Int]) -> Option[(Int, Int)] {
+    match xs.len() {
+        0 | 1 => None,
+        _ => Some((xs[0], xs[1])),
+    }
+}
+
+struct Rect { w: Int, h: Int }
+
+fn main() {
+    for t in [Number(0), Number(-3), Number(8), Word("let"), Word("hat"), Punct(";"), End] {
+        print(describe(t))
+    }
+    print([(0, 0), (0, 5), (3, 0), (2, 2), (1, 9)].map(classify))
+    print(first_two([4, 5, 6]))
+    print(first_two([4]))
+    match (Rect { w: 3, h: 3 }) {
+        Rect { w, h } if w == h => print("square ${w}"),
+        Rect { w, .. } => print("rect ${w}"),
+    }
+    let (a, (b, c)) = (1, (2, 3))
+    print(a + b + c)
+    match true {
+        true => print("yes"),
+        false => print("no"),
+    }
+    let nested = Some(Some(5))
+    match nested {
+        Some(Some(n)) => print(n),
+        Some(None) | None => print("nothing"),
+    }
+}
+//> zero
+//> negative -3
+//> number 8
+//> keyword
+//> word hat
+//> punct ;
+//> end
+//> ["origin", "axis", "axis", "diagonal", "plane"]
+//> Some((4, 5))
+//> None
+//> square 3
+//> 6
+//> yes
+//> 5

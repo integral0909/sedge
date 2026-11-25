@@ -709,7 +709,10 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Return => {
                 self.bump();
-                if matches!(self.peek_kind(), TokenKind::Semi | TokenKind::RBrace) {
+                if matches!(
+                    self.peek_kind(),
+                    TokenKind::Semi | TokenKind::RBrace | TokenKind::Comma | TokenKind::RParen
+                ) {
                     StmtKind::Return(None)
                 } else {
                     StmtKind::Return(Some(self.expr(false)?))
@@ -912,6 +915,39 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// An expression, or an assignment wrapped in a block, for bodies like
+    /// `Some(n) => total += n` and `fn(x) => count = x`.
+    fn expr_or_assign(&mut self) -> PResult<Expr> {
+        let e = self.expr(false)?;
+        let op = match self.peek_kind() {
+            TokenKind::Eq => AssignOp::Set,
+            TokenKind::PlusEq => AssignOp::Add,
+            TokenKind::MinusEq => AssignOp::Sub,
+            TokenKind::StarEq => AssignOp::Mul,
+            TokenKind::SlashEq => AssignOp::Div,
+            TokenKind::PercentEq => AssignOp::Rem,
+            _ => return Ok(e),
+        };
+        self.bump();
+        let value = self.expr(false)?;
+        let span = e.span.to(value.span);
+        let stmt = Stmt {
+            kind: StmtKind::Assign {
+                target: e,
+                op,
+                value,
+            },
+            span,
+        };
+        Ok(self.mk(
+            ExprKind::Block(Block {
+                stmts: vec![stmt],
+                span,
+            }),
+            span,
+        ))
+    }
+
     fn call_args(&mut self) -> PResult<Vec<Expr>> {
         let mut args = Vec::new();
         while !self.at(&TokenKind::RParen) {
@@ -998,6 +1034,19 @@ impl<'a> Parser<'a> {
             }
             TokenKind::If => self.if_expr(),
             TokenKind::Match => self.match_expr(),
+            // `return`, `break` and `continue` in expression position, as in
+            // `None => break`, become a block holding the statement.
+            TokenKind::Return | TokenKind::Break | TokenKind::Continue => {
+                let stmt = self.stmt()?;
+                let span = stmt.span;
+                Ok(self.mk(
+                    ExprKind::Block(Block {
+                        stmts: vec![stmt],
+                        span,
+                    }),
+                    span,
+                ))
+            }
             TokenKind::Fn => self.lambda(),
             _ => {
                 self.error_here("an expression");
@@ -1120,7 +1169,7 @@ impl<'a> Parser<'a> {
                 None
             };
             self.expect(&TokenKind::FatArrow)?;
-            let body = self.expr(false)?;
+            let body = self.expr_or_assign()?;
             let span = pattern.span.to(body.span);
             arms.push(Arm {
                 pattern,
@@ -1169,7 +1218,7 @@ impl<'a> Parser<'a> {
             None
         };
         let body = if self.eat(&TokenKind::FatArrow) {
-            self.expr(false)?
+            self.expr_or_assign()?
         } else if self.at(&TokenKind::LBrace) {
             let b = self.block()?;
             let span = b.span;

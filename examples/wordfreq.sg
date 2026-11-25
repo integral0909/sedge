@@ -1,0 +1,55 @@
+// Counts word frequencies in a file (or standard input) and prints the
+// most common ones: `sedge run examples/wordfreq.sg README.md`.
+
+fn words(text: String) -> [String] {
+    var out = []
+    var current = ""
+    for ch in text.to_lower().chars() {
+        let c = ch.code()
+        let letter = (c >= 97 && c <= 122) || c == 39
+        if letter {
+            current = current + ch
+        } else if !current.is_empty() {
+            out.push(current)
+            current = ""
+        }
+    }
+    if !current.is_empty() { out.push(current) }
+    out
+}
+
+fn read_input() -> Result[String, String] {
+    match args().first() {
+        Some(path) => read_file(path),
+        None => {
+            var lines = []
+            while true {
+                match read_line() {
+                    Some(l) => lines.push(l),
+                    None => break,
+                }
+            }
+            Ok(lines.join("\n"))
+        }
+    }
+}
+
+fn main() {
+    let text = match read_input() {
+        Ok(t) => t,
+        Err(e) => {
+            print("error: ${e}")
+            exit(1)
+        }
+    }
+    let counts: Map[String, Int] = Map.new()
+    for w in words(text) {
+        counts[w] = counts.get_or(w, 0) + 1
+    }
+    var entries = counts.entries()
+    entries.sort_by(fn(a, b) => if a.1 != b.1 { b.1 - a.1 } else if a.0 < b.0 { -1 } else { 1 })
+    for (word, n) in entries.take(10) {
+        print("${n.to_base(10)}\t${word}")
+    }
+    print("${counts.len()} distinct words")
+}

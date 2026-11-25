@@ -1,0 +1,11 @@
+fn check(age: Int) {
+    if age < 0 {
+        panic("age cannot be negative: ${age}")
+    }
+}
+
+fn main() {
+    check(4)
+    check(-2)
+}
+//! panic: age cannot be negative: -2

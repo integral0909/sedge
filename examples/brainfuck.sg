@@ -1,0 +1,62 @@
+// An interpreter for the Brainfuck language, with precomputed jumps.
+
+enum Instr { Add(Int), Move(Int), Out, In, JumpZero(Int), JumpNonZero(Int) }
+
+fn compile(src: String) -> Result[[Instr], String] {
+    var code = []
+    var stack = []
+    for ch in src.chars() {
+        match ch {
+            "+" => code.push(Add(1)),
+            "-" => code.push(Add(-1)),
+            ">" => code.push(Move(1)),
+            "<" => code.push(Move(-1)),
+            "." => code.push(Out),
+            "," => code.push(In),
+            "[" => {
+                stack.push(code.len())
+                code.push(JumpZero(0))
+            }
+            "]" => match stack.pop() {
+                Some(open) => {
+                    code[open] = JumpZero(code.len())
+                    code.push(JumpNonZero(open))
+                }
+                None => return Err("unmatched `]`"),
+            },
+            _ => {}
+        }
+    }
+    if !stack.is_empty() {
+        return Err("unmatched `[`")
+    }
+    Ok(code)
+}
+
+fn run(code: [Instr]) -> String {
+    let tape = Array.filled(0, 30000)
+    var ptr = 0
+    var pc = 0
+    var out = []
+    while pc < code.len() {
+        match code[pc] {
+            Add(n) => tape[ptr] = (tape[ptr] + n + 256) % 256,
+            Move(n) => ptr += n,
+            Out => out.push(tape[ptr].to_char()),
+            In => tape[ptr] = 0,
+            JumpZero(target) => if tape[ptr] == 0 { pc = target },
+            JumpNonZero(target) => if tape[ptr] != 0 { pc = target },
+        }
+        pc += 1
+    }
+    out.join("")
+}
+
+fn main() {
+    let hello = "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++."
+    match compile(hello) {
+        Ok(code) => write(run(code)),
+        Err(e) => print("error: ${e}"),
+    }
+    print(compile("[[]"))
+}

@@ -1,0 +1,90 @@
+// Conway's Game of Life on a wrapping grid.
+
+struct Grid {
+    width: Int,
+    height: Int,
+    cells: [Bool],
+}
+
+impl Grid {
+    fn parse(rows: [String]) -> Grid {
+        let height = rows.len()
+        let width = rows[0].len()
+        let cells = Array.filled(false, width * height)
+        for y in 0..height {
+            let row = rows[y]
+            for x in 0..width {
+                cells[y * width + x] = row.byte_at(x) == 35 // '#'
+            }
+        }
+        Grid { width, height, cells }
+    }
+
+    fn alive(self, x: Int, y: Int) -> Bool {
+        let wx = (x + self.width) % self.width
+        let wy = (y + self.height) % self.height
+        self.cells[wy * self.width + wx]
+    }
+
+    fn neighbours(self, x: Int, y: Int) -> Int {
+        var n = 0
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                if (dx != 0 || dy != 0) && self.alive(x + dx, y + dy) {
+                    n += 1
+                }
+            }
+        }
+        n
+    }
+
+    fn step(self) -> Grid {
+        let next = Array.filled(false, self.width * self.height)
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let n = self.neighbours(x, y)
+                next[y * self.width + x] = n == 3 || (n == 2 && self.alive(x, y))
+            }
+        }
+        Grid { width: self.width, height: self.height, cells: next }
+    }
+
+    fn show(self) -> String {
+        var lines = []
+        for y in 0..self.height {
+            var line = ""
+            for x in 0..self.width {
+                line = line + if self.alive(x, y) { "#" } else { "." }
+            }
+            lines.push(line)
+        }
+        lines.join("\n")
+    }
+
+    fn population(self) -> Int {
+        self.cells.count(fn(c) => c)
+    }
+}
+
+fn main() {
+    var g = Grid.parse([
+        "..........",
+        "...#......",
+        "....#.....",
+        "..###.....",
+        "..........",
+        "..........",
+        "......##..",
+        "......##..",
+    ])
+    for gen in 0..4 {
+        print("generation ${gen}, population ${g.population()}")
+        print(g.show())
+        print("")
+        g = g.step()
+    }
+    for _ in 0..100 {
+        g = g.step()
+    }
+    print("after 104 generations: population ${g.population()}")
+}

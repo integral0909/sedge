@@ -1,0 +1,63 @@
+struct Vec2 { x: Float, y: Float }
+
+impl Vec2 {
+    fn new(x: Float, y: Float) -> Vec2 { Vec2 { x, y } }
+    fn add(self, o: Vec2) -> Vec2 { Vec2 { x: self.x + o.x, y: self.y + o.y } }
+    fn scale(self, k: Float) -> Self { Vec2.new(self.x * k, self.y * k) }
+    fn len(self) -> Float { (self.x * self.x + self.y * self.y).sqrt() }
+}
+
+enum Expr {
+    Num(Int),
+    Add(Expr, Expr),
+    Mul(Expr, Expr),
+    Neg(Expr),
+}
+
+fn eval(e: Expr) -> Int {
+    match e {
+        Num(n) => n,
+        Add(a, b) => eval(a) + eval(b),
+        Mul(a, b) => eval(a) * eval(b),
+        Neg(a) => -eval(a),
+    }
+}
+
+fn show(e: Expr) -> String {
+    match e {
+        Num(n) => str(n),
+        Add(a, b) => "(${show(a)} + ${show(b)})",
+        Mul(a, b) => "${show(a)} * ${show(b)}",
+        Neg(a) => "-${show(a)}",
+    }
+}
+
+struct Account { owner: String, balance: Int }
+
+fn main() {
+    let v = Vec2.new(3.0, 4.0).add(Vec2.new(0.0, 0.0)).scale(2.0)
+    print(v)
+    print(v.len())
+
+    let e = Mul(Add(Num(1), Num(2)), Neg(Num(4)))
+    print(show(e))
+    print(eval(e))
+    print(e == Mul(Add(Num(1), Num(2)), Neg(Num(4))))
+    print(e == Num(1))
+
+    // Structs are references: both names see the change.
+    let acct = Account { owner: "ana", balance: 10 }
+    let same = acct
+    same.balance += 5
+    print(acct.balance)
+    let Account { owner, .. } = acct
+    print(owner)
+}
+//> Vec2 { x: 6.0, y: 8.0 }
+//> 10.0
+//> (1 + 2) * -4
+//> -12
+//> true
+//> false
+//> 15
+//> ana

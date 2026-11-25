@@ -1,0 +1,6 @@
+fn main() {
+    let m: Map[String, Int] = Map.new()
+    print(m.get("missing").unwrap())
+}
+//! panic: called `unwrap` on `None`
+//! at main (unwrap.sg:3)

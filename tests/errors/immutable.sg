@@ -1,0 +1,6 @@
+fn main() {
+    let n = 1
+    n += 1
+}
+//! cannot assign twice to `n`
+//! declare it with `var n` to make it reassignable

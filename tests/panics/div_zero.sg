@@ -1,0 +1,5 @@
+fn main() {
+    let zero = 0
+    print(10 / zero)
+}
+//! panic: division by zero

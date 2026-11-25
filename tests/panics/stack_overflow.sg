@@ -1,0 +1,6 @@
+fn forever(n: Int) -> Int { forever(n + 1) + 1 }
+
+fn main() {
+    forever(0)
+}
+//! panic: stack overflow

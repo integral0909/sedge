@@ -1,0 +1,46 @@
+// Allocates far more than the collection threshold; results must survive.
+struct Node { value: Int, next: Option[Node] }
+
+fn build(n: Int) -> Option[Node] {
+    var head = None
+    for i in 0..n {
+        head = Some(Node { value: i, next: head })
+    }
+    head
+}
+
+fn length(l: Option[Node]) -> Int {
+    var n = 0
+    var cur = l
+    while true {
+        match cur {
+            Some(node) => {
+                n += 1
+                cur = node.next
+            }
+            None => break,
+        }
+    }
+    n
+}
+
+fn main() {
+    let keep = build(1000)
+    var total = 0
+    for round in 0..200 {
+        let tmp = build(500)
+        total += length(tmp)
+        let s = "round ${round}"
+        total += s.len() - s.len()
+    }
+    print(total)
+    print(length(keep))
+    let words = []
+    for i in 0..20000 {
+        words.push("w${i}")
+    }
+    print(words[19999])
+}
+//> 100000
+//> 1000
+//> w19999

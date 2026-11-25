@@ -1,0 +1,18 @@
+// Tight loops over ranges and arrays.
+fn main() {
+    let n = 3000000
+    let xs = Array.filled(0, n)
+    for i in 0..n {
+        xs[i] = i * 7 % 1000
+    }
+    var total = 0
+    for x in xs {
+        total += x
+    }
+    var j = 0
+    while j < n {
+        total -= 1
+        j += 1
+    }
+    print(total)
+}

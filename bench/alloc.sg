@@ -1,0 +1,20 @@
+// Allocation-heavy: builds and drops many small objects and strings.
+struct Pair { a: Int, b: Int }
+
+fn main() {
+    var keep = []
+    var sum = 0
+    for i in 0..500000 {
+        let p = Pair { a: i, b: i * 2 }
+        let t = (p.a, "item ${i}")
+        sum += p.b + t.1.len()
+        if i % 1000 == 0 { keep.push(t) }
+    }
+    let m = Map.new()
+    for i in 0..100000 {
+        m["k${i % 5000}"] = i
+    }
+    print(sum)
+    print(keep.len())
+    print(m.len())
+}

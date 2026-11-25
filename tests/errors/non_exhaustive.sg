@@ -1,0 +1,12 @@
+enum Light { Red, Yellow, Green }
+
+fn next(l: Light) -> Light {
+    match l {
+        Red => Green,
+        Green => Yellow,
+    }
+}
+
+fn main() {}
+//! this `match` does not handle every case
+//! `Yellow` is not covered

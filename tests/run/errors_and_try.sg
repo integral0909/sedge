@@ -1,0 +1,60 @@
+enum ParseError { Empty, BadDigit(String), Overflow }
+
+fn parse_digit(c: String) -> Result[Int, ParseError] {
+    match c.parse_int() {
+        Some(d) => Ok(d),
+        None => Err(BadDigit(c)),
+    }
+}
+
+fn parse_number(s: String) -> Result[Int, ParseError] {
+    if s.is_empty() {
+        return Err(Empty)
+    }
+    var n = 0
+    for c in s.chars() {
+        let d = parse_digit(c)?
+        if n > 100000000 {
+            return Err(Overflow)
+        }
+        n = n * 10 + d
+    }
+    Ok(n)
+}
+
+fn add_strings(a: String, b: String) -> Option[Int] {
+    let x = a.parse_int()?
+    let y = b.parse_int()?
+    Some(x + y)
+}
+
+fn main() {
+    print(parse_number("1234"))
+    print(parse_number(""))
+    print(parse_number("12x4"))
+    print(parse_number("99999999999"))
+    print(add_strings("2", "3"))
+    print(add_strings("2", "z"))
+    print(parse_number("7").map(fn(n) => n * 2).unwrap_or(0))
+    print(parse_number("q").map_err(fn(e) => "failed: ${e}"))
+    print(parse_number("5").ok())
+    print(parse_number("5").is_ok())
+    print(Some(1).or(Some(2)))
+    print(None.or(Some(2)))
+    print(Some(4).and_then(fn(x) => if x > 3 { Some(x) } else { None }))
+    print(Some(3).ok_or("none"))
+}
+//> Ok(1234)
+//> Err(Empty)
+//> Err(BadDigit("x"))
+//> Err(Overflow)
+//> Some(5)
+//> None
+//> 14
+//> Err("failed: BadDigit(\"q\")")
+//> Some(5)
+//> true
+//> Some(1)
+//> Some(2)
+//> Some(4)
+//> Ok(3)

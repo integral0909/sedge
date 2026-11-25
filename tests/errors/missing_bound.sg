@@ -1,0 +1,11 @@
+fn biggest[T](xs: [T]) -> T {
+    var best = xs[0]
+    for x in xs {
+        if x > best { best = x }
+    }
+    best
+}
+
+fn main() {}
+//! `>` needs a type that is `Ord`, found `T`
+//! declare the bound on the type parameter: `T: Ord`

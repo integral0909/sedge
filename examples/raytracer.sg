@@ -1,0 +1,119 @@
+// A small ray tracer: spheres, a checkered floor, shadows and reflections.
+// Writes a PPM image: `sedge run examples/raytracer.sg > out.ppm`.
+
+struct V3 { x: Float, y: Float, z: Float }
+
+impl V3 {
+    fn new(x: Float, y: Float, z: Float) -> V3 { V3 { x, y, z } }
+    fn add(self, o: V3) -> V3 { V3.new(self.x + o.x, self.y + o.y, self.z + o.z) }
+    fn sub(self, o: V3) -> V3 { V3.new(self.x - o.x, self.y - o.y, self.z - o.z) }
+    fn mul(self, k: Float) -> V3 { V3.new(self.x * k, self.y * k, self.z * k) }
+    fn times(self, o: V3) -> V3 { V3.new(self.x * o.x, self.y * o.y, self.z * o.z) }
+    fn dot(self, o: V3) -> Float { self.x * o.x + self.y * o.y + self.z * o.z }
+    fn norm(self) -> V3 { self.mul(1.0 / self.dot(self).sqrt()) }
+}
+
+struct Ray { origin: V3, dir: V3 }
+
+enum Shape { Sphere(V3, Float), Plane(V3, Float) }
+
+struct Object { shape: Shape, color: V3, reflect: Float, checker: Bool }
+
+struct Hit { t: Float, point: V3, normal: V3, obj: Object }
+
+fn intersect(r: Ray, o: Object) -> Option[Float] {
+    match o.shape {
+        Sphere(center, radius) => {
+            let oc = r.origin.sub(center)
+            let b = oc.dot(r.dir)
+            let c = oc.dot(oc) - radius * radius
+            let disc = b * b - c
+            if disc < 0.0 { return None }
+            let s = disc.sqrt()
+            let t = if -b - s > 0.001 { -b - s } else { -b + s }
+            if t > 0.001 { Some(t) } else { None }
+        }
+        Plane(normal, offset) => {
+            let denom = normal.dot(r.dir)
+            if denom.abs() < 1e-6 { return None }
+            let t = -(normal.dot(r.origin) + offset) / denom
+            if t > 0.001 { Some(t) } else { None }
+        }
+    }
+}
+
+fn closest(r: Ray, scene: [Object]) -> Option[Hit] {
+    var best: Option[Hit] = None
+    var best_t = 1e30
+    for o in scene {
+        match intersect(r, o) {
+            Some(t) if t < best_t => {
+                best_t = t
+                let p = r.origin.add(r.dir.mul(t))
+                let n = match o.shape {
+                    Sphere(c, _) => p.sub(c).norm(),
+                    Plane(normal, _) => normal,
+                }
+                best = Some(Hit { t, point: p, normal: n, obj: o })
+            }
+            _ => {}
+        }
+    }
+    best
+}
+
+fn trace(r: Ray, scene: [Object], light: V3, depth: Int) -> V3 {
+    match closest(r, scene) {
+        None => V3.new(0.5, 0.7, 1.0).mul(1.0 - r.dir.y * 0.5),
+        Some(hit) => {
+            var base = hit.obj.color
+            if hit.obj.checker {
+                let check = (hit.point.x.floor() + hit.point.z.floor()).to_int() % 2 == 0
+                base = if check { V3.new(0.9, 0.9, 0.9) } else { V3.new(0.2, 0.2, 0.2) }
+            }
+            let to_light = light.sub(hit.point).norm()
+            let shadow = closest(Ray { origin: hit.point, dir: to_light }, scene)
+            let lit = match shadow {
+                Some(_) => 0.15,
+                None => max(hit.normal.dot(to_light), 0.0) * 0.85 + 0.15,
+            }
+            var color = base.mul(lit)
+            if hit.obj.reflect > 0.0 && depth < 3 {
+                let d = r.dir.sub(hit.normal.mul(2.0 * r.dir.dot(hit.normal)))
+                let reflected = trace(Ray { origin: hit.point, dir: d.norm() }, scene, light, depth + 1)
+                color = color.mul(1.0 - hit.obj.reflect).add(reflected.mul(hit.obj.reflect))
+            }
+            color
+        }
+    }
+}
+
+fn channel(f: Float) -> Int { (f.clamp(0.0, 1.0) * 255.0).to_int() }
+
+fn main() {
+    let size = match args().first() {
+        Some(s) => s.parse_int().unwrap_or(64),
+        None => 64,
+    }
+    let scene = [
+        Object { shape: Plane(V3.new(0.0, 1.0, 0.0), 1.0), color: V3.new(1.0, 1.0, 1.0), reflect: 0.2, checker: true },
+        Object { shape: Sphere(V3.new(0.0, 0.0, 4.0), 1.0), color: V3.new(0.9, 0.2, 0.2), reflect: 0.3, checker: false },
+        Object { shape: Sphere(V3.new(-2.2, -0.3, 5.0), 0.7), color: V3.new(0.2, 0.8, 0.3), reflect: 0.1, checker: false },
+        Object { shape: Sphere(V3.new(2.0, 0.2, 5.5), 1.2), color: V3.new(0.3, 0.4, 0.9), reflect: 0.5, checker: false },
+    ]
+    let light = V3.new(-4.0, 6.0, -2.0)
+    print("P3")
+    print("${size} ${size}")
+    print("255")
+    for py in 0..size {
+        var row = []
+        for px in 0..size {
+            let x = (px.to_float() + 0.5) / size.to_float() * 2.0 - 1.0
+            let y = 1.0 - (py.to_float() + 0.5) / size.to_float() * 2.0
+            let dir = V3.new(x, y, 1.5).norm()
+            let c = trace(Ray { origin: V3.new(0.0, 0.5, -1.0), dir }, scene, light, 0)
+            row.push("${channel(c.x)} ${channel(c.y)} ${channel(c.z)}")
+        }
+        print(row.join(" "))
+    }
+}

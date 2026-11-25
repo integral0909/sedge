@@ -1,0 +1,2 @@
+fn helper() {}
+//! no `main` function

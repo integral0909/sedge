@@ -1,0 +1,7 @@
+fn f(s: String) -> Int {
+    let n = s.parse_int()?
+    n
+}
+
+fn main() {}
+//! `?` on an `Option` needs the function to return an `Option`

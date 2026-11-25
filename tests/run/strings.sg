@@ -1,0 +1,51 @@
+fn main() {
+    let name = "Sedge"
+    print("hello, ${name}! ${1 + 1} ${[1, 2]}")
+    print("a,b,,c".split(","))
+    print("  padded  ".trim())
+    print("Hello".to_upper() + "Hello".to_lower())
+    print("abc".len())
+    print("héllo".chars())
+    print("hello".slice(1, 3))
+    print("hello".find("ll"))
+    print("hello".find("z"))
+    print("hello".contains("ell"))
+    print("ab".repeat(3))
+    print("42".parse_int())
+    print(" -7 ".parse_int())
+    print("x1".parse_int())
+    print("2.5".parse_float())
+    print("a-b-c".replace("-", "+"))
+    print("line1\nline2".lines())
+    print(debug("quote\"d"))
+    print(str(12) + str(true))
+    print("A".code())
+    print(97.to_char())
+    print("\u{1F600}".len())
+    print("x" < "y")
+    print("esc: \t|\\|\$|")
+}
+//> hello, Sedge! 2 [1, 2]
+//> ["a", "b", "", "c"]
+//> padded
+//> HELLOhello
+//> 3
+//> ["h", "é", "l", "l", "o"]
+//> el
+//> Some(2)
+//> None
+//> true
+//> ababab
+//> Some(42)
+//> Some(-7)
+//> None
+//> Some(2.5)
+//> a+b+c
+//> ["line1", "line2"]
+//> "quote\"d"
+//> 12true
+//> 65
+//> a
+//> 4
+//> true
+//> esc: 	|\|$|

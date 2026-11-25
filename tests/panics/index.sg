@@ -1,0 +1,10 @@
+fn get(xs: [Int], i: Int) -> Int { xs[i] }
+
+fn main() {
+    print("before")
+    print(get([1, 2, 3], 5))
+}
+//> before
+//! panic: index 5 is out of bounds for an array of length 3
+//! at get (index.sg:1)
+//! at main (index.sg:5)

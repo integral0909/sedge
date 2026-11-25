@@ -1,0 +1,200 @@
+// A JSON parser and pretty-printer, written as a recursive-descent parser
+// over the bytes of the input.
+
+enum Json {
+    Null,
+    Bool(Bool),
+    Number(Float),
+    Text(String),
+    List([Json]),
+    Object([(String, Json)]),
+}
+
+struct Parser {
+    src: String,
+    pos: Int,
+}
+
+impl Parser {
+    fn new(src: String) -> Parser {
+        Parser { src, pos: 0 }
+    }
+
+    fn peek(self) -> Int {
+        if self.pos < self.src.len() { self.src.byte_at(self.pos) } else { 0 }
+    }
+
+    fn skip_ws(self) {
+        while self.pos < self.src.len() {
+            let c = self.peek()
+            if c == 32 || c == 10 || c == 13 || c == 9 {
+                self.pos += 1
+            } else {
+                return
+            }
+        }
+    }
+
+    fn error(self, what: String) -> Result[Json, String] {
+        Err("${what} at byte ${self.pos}")
+    }
+
+    fn expect(self, word: String) -> Result[(), String] {
+        let end = self.pos + word.len()
+        if end <= self.src.len() && self.src.slice(self.pos, end) == word {
+            self.pos = end
+            Ok(())
+        } else {
+            Err("expected `${word}` at byte ${self.pos}")
+        }
+    }
+
+    fn value(self) -> Result[Json, String] {
+        self.skip_ws()
+        let c = self.peek()
+        if c == 123 { return self.object() }       // {
+        if c == 91 { return self.list() }          // [
+        if c == 34 { return self.text().map(Text) } // "
+        if c == 116 { self.expect("true")?; return Ok(Bool(true)) }
+        if c == 102 { self.expect("false")?; return Ok(Bool(false)) }
+        if c == 110 { self.expect("null")?; return Ok(Null) }
+        if c == 45 || (c >= 48 && c <= 57) { return self.number() }
+        self.error("unexpected character")
+    }
+
+    fn number(self) -> Result[Json, String] {
+        let start = self.pos
+        while self.pos < self.src.len() {
+            let c = self.peek()
+            if (c >= 48 && c <= 57) || c == 45 || c == 43 || c == 46 || c == 101 || c == 69 {
+                self.pos += 1
+            } else {
+                break
+            }
+        }
+        match self.src.slice(start, self.pos).parse_float() {
+            Some(f) => Ok(Number(f)),
+            None => self.error("bad number"),
+        }
+    }
+
+    fn text(self) -> Result[String, String] {
+        self.pos += 1
+        var out = ""
+        var start = self.pos
+        while true {
+            if self.pos >= self.src.len() {
+                return Err("unterminated string")
+            }
+            let c = self.peek()
+            if c == 34 {
+                out = out + self.src.slice(start, self.pos)
+                self.pos += 1
+                return Ok(out)
+            }
+            if c == 92 {
+                out = out + self.src.slice(start, self.pos)
+                let e = self.src.byte_at(self.pos + 1)
+                out = out + match e {
+                    110 => "\n",
+                    116 => "\t",
+                    34 => "\"",
+                    92 => "\\",
+                    _ => "?",
+                }
+                self.pos += 2
+                start = self.pos
+            } else {
+                self.pos += 1
+            }
+        }
+        Err("unreachable")
+    }
+
+    fn list(self) -> Result[Json, String] {
+        self.pos += 1
+        var items = []
+        self.skip_ws()
+        if self.peek() == 93 {
+            self.pos += 1
+            return Ok(List(items))
+        }
+        while true {
+            items.push(self.value()?)
+            self.skip_ws()
+            let c = self.peek()
+            self.pos += 1
+            if c == 93 { break }
+            if c != 44 { return self.error("expected `,` or `]`") }
+        }
+        Ok(List(items))
+    }
+
+    fn object(self) -> Result[Json, String] {
+        self.pos += 1
+        var fields = []
+        self.skip_ws()
+        if self.peek() == 125 {
+            self.pos += 1
+            return Ok(Object(fields))
+        }
+        while true {
+            self.skip_ws()
+            if self.peek() != 34 { return self.error("expected a key") }
+            let key = self.text()?
+            self.skip_ws()
+            self.expect(":")?
+            fields.push((key, self.value()?))
+            self.skip_ws()
+            let c = self.peek()
+            self.pos += 1
+            if c == 125 { break }
+            if c != 44 { return self.error("expected `,` or `}`") }
+        }
+        Ok(Object(fields))
+    }
+}
+
+fn parse(src: String) -> Result[Json, String] {
+    let p = Parser.new(src)
+    let v = p.value()?
+    p.skip_ws()
+    if p.pos != src.len() {
+        return Err("trailing characters at byte ${p.pos}")
+    }
+    Ok(v)
+}
+
+fn render(v: Json, indent: String) -> String {
+    let inner = indent + "  "
+    match v {
+        Null => "null",
+        Bool(b) => str(b),
+        Number(n) => if n == n.floor() && n.abs() < 1e15 { str(n.to_int()) } else { str(n) },
+        Text(s) => debug(s),
+        List(items) => {
+            if items.is_empty() { return "[]" }
+            let parts = items.map(fn(x) => inner + render(x, inner))
+            "[\n${parts.join(",\n")}\n${indent}]"
+        }
+        Object(fields) => {
+            if fields.is_empty() { return "{}" }
+            let parts = fields.map(fn(f) => "${inner}${debug(f.0)}: ${render(f.1, inner)}")
+            "{\n${parts.join(",\n")}\n${indent}}"
+        }
+    }
+}
+
+fn main() {
+    let doc = "{\"name\": \"sedge\", \"version\": 0.1, \"tags\": [\"lang\", \"vm\"], \"nested\": {\"ok\": true, \"n\": null, \"list\": [1, 2.5, -3e2]}}"
+    match parse(doc) {
+        Ok(v) => print(render(v, "")),
+        Err(e) => print("error: ${e}"),
+    }
+    for bad in ["[1, 2", "{\"a\" 1}", "tru", "[1] x"] {
+        match parse(bad) {
+            Ok(_) => print("unexpectedly parsed ${bad}"),
+            Err(e) => print("${debug(bad)}: ${e}"),
+        }
+    }
+}

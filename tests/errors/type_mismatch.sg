@@ -1,0 +1,6 @@
+fn main() {
+    let x: Int = "five"
+}
+//! error: mismatched types
+//! expected `Int`, found `String`
+//! --> type_mismatch.sg:2:18

@@ -1,0 +1,65 @@
+// Closures capture `let` bindings by value and `var` bindings by reference.
+fn make_counter() -> fn() -> Int {
+    var count = 0
+    fn() {
+        count += 1
+        count
+    }
+}
+
+fn adder(n: Int) -> fn(Int) -> Int {
+    fn(x) => x + n
+}
+
+fn compose[A, B, C](f: fn(A) -> B, g: fn(B) -> C) -> fn(A) -> C {
+    fn(x) => g(f(x))
+}
+
+fn apply_twice(f: fn(Int) -> Int, x: Int) -> Int {
+    f(f(x))
+}
+
+fn main() {
+    let a = make_counter()
+    let b = make_counter()
+    a()
+    a()
+    print(a())
+    print(b())
+
+    let add5 = adder(5)
+    print(apply_twice(add5, 1))
+
+    let shout = compose(fn(s: String) => s.to_upper(), fn(s) => s + "!")
+    print(shout("hey"))
+
+    // A shared `var` seen by two closures.
+    var total = 0
+    let inc = fn(by: Int) { total += by }
+    let get = fn() => total
+    inc(3)
+    inc(4)
+    print(get())
+    print(total)
+
+    // Nested closures capture through each level.
+    let x = 10
+    let outer = fn() => fn() => x * 2
+    print(outer()())
+
+    // Functions and variant constructors as values.
+    print([1, 2, 3].map(str))
+    print([1, 2].map(Some))
+    let f = adder
+    print(f(1)(2))
+}
+//> 3
+//> 1
+//> 11
+//> HEY!
+//> 7
+//> 7
+//> 20
+//> ["1", "2", "3"]
+//> [Some(1), Some(2)]
+//> 3

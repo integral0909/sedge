@@ -1,0 +1,6 @@
+fn main() {
+    let total = 3
+    print(totl + 1)
+}
+//! cannot find `totl` in this scope
+//! did you mean `total`?
