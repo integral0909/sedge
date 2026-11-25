@@ -2525,10 +2525,21 @@ impl<'a> Checker<'a> {
                 }
                 _ => Pat::Wild,
             },
-            PatternKind::Tuple(elems) => Pat::Ctor(
-                Ctor::Tuple(elems.len()),
-                elems.iter().map(|x| self.lower_pattern(x)).collect(),
-            ),
+            PatternKind::Tuple(elems) => {
+                // A tuple pattern of the wrong size was already reported.
+                let fits = match self.t.pattern_types.get(&p.id).map(|t| self.u.resolve(t)) {
+                    Some(Ty::Tuple(ts)) => ts.len() == elems.len(),
+                    Some(Ty::Unit) => elems.is_empty(),
+                    _ => false,
+                };
+                if !fits {
+                    return Pat::Wild;
+                }
+                Pat::Ctor(
+                    Ctor::Tuple(elems.len()),
+                    elems.iter().map(|x| self.lower_pattern(x)).collect(),
+                )
+            }
             PatternKind::Or(alts) => Pat::Or(alts.iter().map(|x| self.lower_pattern(x)).collect()),
         }
     }

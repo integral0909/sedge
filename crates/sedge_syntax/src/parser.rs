@@ -238,9 +238,13 @@ impl<'a> Parser<'a> {
             if self.at(&TokenKind::Eof) {
                 break;
             }
+            let before = self.pos;
             match self.item() {
                 Ok(item) => items.push(item),
                 Err(()) => self.recover_item(),
+            }
+            if self.pos == before {
+                self.bump();
             }
         }
         Module { items }
@@ -622,6 +626,7 @@ impl<'a> Parser<'a> {
             if self.at(&TokenKind::RBrace) || self.at(&TokenKind::Eof) {
                 break;
             }
+            let before = self.pos;
             match self.stmt() {
                 Ok(s) => {
                     let block_like =
@@ -634,6 +639,10 @@ impl<'a> Parser<'a> {
                     }
                 }
                 Err(()) => self.recover_stmt(),
+            }
+            if self.pos == before {
+                // Always make progress, whatever recovery did.
+                self.bump();
             }
         }
         self.expect(&TokenKind::RBrace)?;
@@ -654,12 +663,10 @@ impl<'a> Parser<'a> {
                 }
                 TokenKind::LBrace | TokenKind::LParen | TokenKind::LBracket => depth += 1,
                 TokenKind::RBrace if depth == 0 => return,
-                TokenKind::RBrace | TokenKind::RParen | TokenKind::RBracket => {
-                    depth -= 1;
-                    if depth < 0 {
-                        return;
-                    }
-                }
+                // A stray `)` or `]` at this level is skipped; it cannot
+                // close anything.
+                TokenKind::RParen | TokenKind::RBracket if depth == 0 => {}
+                TokenKind::RBrace | TokenKind::RParen | TokenKind::RBracket => depth -= 1,
                 _ => {}
             }
             self.bump();

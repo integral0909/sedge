@@ -682,11 +682,23 @@ impl<'a> Compiler<'a> {
             {
                 let x = self.expr(b, lhs, None)?;
                 let y = self.expr(b, rhs, None)?;
-                let (p, q) = if matches!(op, BinOp::Gt | BinOp::Ge) { (y, x) } else { (x, y) };
-                let jump = if matches!(op, BinOp::Lt | BinOp::Gt) {
-                    Op::JumpIfNotLtI { a: p, b: q, offset: 0 }
+                let (p, q) = if matches!(op, BinOp::Gt | BinOp::Ge) {
+                    (y, x)
                 } else {
-                    Op::JumpIfNotLeI { a: p, b: q, offset: 0 }
+                    (x, y)
+                };
+                let jump = if matches!(op, BinOp::Lt | BinOp::Gt) {
+                    Op::JumpIfNotLtI {
+                        a: p,
+                        b: q,
+                        offset: 0,
+                    }
+                } else {
+                    Op::JumpIfNotLeI {
+                        a: p,
+                        b: q,
+                        offset: 0,
+                    }
                 };
                 return Ok(b.emit(jump));
             }
@@ -726,7 +738,12 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    fn tail_block(&mut self, b: &mut Builder, block: &Block, unit: bool) -> Result<(), CompileError> {
+    fn tail_block(
+        &mut self,
+        b: &mut Builder,
+        block: &Block,
+        unit: bool,
+    ) -> Result<(), CompileError> {
         let saved = b.next;
         let n = block.stmts.len();
         for (i, s) in block.stmts.iter().enumerate() {
@@ -1044,7 +1061,11 @@ impl<'a> Compiler<'a> {
         // `x + 1` on Ints becomes a single instruction.
         if matches!(op, BinOp::Add | BinOp::Sub) && kind == Kind::Int {
             if let ExprKind::Int(v) = rhs.kind {
-                let v = if op == BinOp::Sub { v.checked_neg() } else { Some(v) };
+                let v = if op == BinOp::Sub {
+                    v.checked_neg()
+                } else {
+                    Some(v)
+                };
                 if let Some(imm) = v.and_then(|v| i32::try_from(v).ok()) {
                     let x = self.expr(b, lhs, None)?;
                     let d = self.dest(b, dst);

@@ -121,6 +121,8 @@ fn specialize(adts: &[AdtDef], rows: &[Vec<Pat>], c: &Ctor) -> Vec<Vec<Pat>> {
             }
             Pat::Ctor(rc, args) if rc == c => {
                 let mut r = args.clone();
+                // Ill-typed patterns can have the wrong number of fields.
+                r.resize(n, Pat::Wild);
                 r.extend_from_slice(&row[1..]);
                 out.push(r);
             }
@@ -170,6 +172,8 @@ pub fn useful(
         }
         Pat::Ctor(c, args) => {
             let fts = field_types(adts, resolve, c, ty);
+            let mut args = args.clone();
+            args.resize(fts.len(), Pat::Wild);
             let mut q2 = args.clone();
             q2.extend_from_slice(&q[1..]);
             let mut t2 = fts;
